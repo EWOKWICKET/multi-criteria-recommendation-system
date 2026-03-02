@@ -1,7 +1,7 @@
 import type { AlternativeMatrices } from './ahp.types.js';
 
 /** A single position step on the Saaty scale */
-export interface PositionStep {
+export type PositionStep = {
   stepNumber: number;
   criterion: string;
   comparedTo: string;
@@ -9,10 +9,10 @@ export interface PositionStep {
   newValue: number;
   localPriorityAfterStep: number;
   globalPriorityAfterStep: number;
-}
+};
 
 /** Result returned by any recommendation algorithm */
-export interface RecommendationResult {
+export type RecommendationResult = {
   originalGlobalPriority: number;
   newGlobalPriority: number;
   leaderGlobalPriority: number;
@@ -20,4 +20,4 @@ export interface RecommendationResult {
   totalSteps: number;
   steps: PositionStep[];
   modifiedMatrices: AlternativeMatrices;
-}
+};
