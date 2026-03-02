@@ -28,10 +28,17 @@ const ALT_MATRICES = {
 const CRITERIA_NAMES = ['Price', 'Quality', 'Delivery'];
 const ALT_NAMES = ['A1', 'A2', 'A3'];
 
+const makeParams = (targetIndex: number) => ({
+  criteriaMatrix: CRITERIA_MATRIX,
+  alternativeMatrices: ALT_MATRICES,
+  criteriaNames: CRITERIA_NAMES,
+  alternativeNames: ALT_NAMES,
+  targetIndex,
+});
+
 describe('globalLeader (Algorithm 1)', () => {
   it('returns no steps when target is already the winner', () => {
-    // A1 is the winner (index 0)
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 0);
+    const result = globalLeader(makeParams(0));
 
     expect(result.totalSteps).toBe(0);
     expect(result.steps).toHaveLength(0);
@@ -39,8 +46,7 @@ describe('globalLeader (Algorithm 1)', () => {
   });
 
   it('generates steps to improve a losing alternative', () => {
-    // A3 is the weakest (index 2)
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 2);
+    const result = globalLeader(makeParams(2));
 
     expect(result.totalSteps).toBeGreaterThan(0);
     expect(result.steps).toHaveLength(result.totalSteps);
@@ -48,7 +54,7 @@ describe('globalLeader (Algorithm 1)', () => {
   });
 
   it('steps are sequentially numbered and have valid fields', () => {
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 2);
+    const result = globalLeader(makeParams(2));
 
     for (let i = 0; i < result.steps.length; i++) {
       const step = result.steps[i];
@@ -60,7 +66,7 @@ describe('globalLeader (Algorithm 1)', () => {
   });
 
   it('global priority increases monotonically across steps', () => {
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 2);
+    const result = globalLeader(makeParams(2));
 
     let prev = result.originalGlobalPriority;
     for (const step of result.steps) {
@@ -70,7 +76,7 @@ describe('globalLeader (Algorithm 1)', () => {
   });
 
   it('new global priority matches the last step', () => {
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 2);
+    const result = globalLeader(makeParams(2));
 
     if (result.steps.length > 0) {
       expect(result.newGlobalPriority).toBeCloseTo(result.steps[result.steps.length - 1].globalPriorityAfterStep);
@@ -78,21 +84,22 @@ describe('globalLeader (Algorithm 1)', () => {
   });
 
   it('returns modified matrices that differ from originals', () => {
-    const result = globalLeader(CRITERIA_MATRIX, ALT_MATRICES, CRITERIA_NAMES, ALT_NAMES, 2);
+    const result = globalLeader(makeParams(2));
 
-    // At least one matrix should have changed
     let anyChanged = false;
     for (const name of CRITERIA_NAMES) {
       const orig = ALT_MATRICES[name];
       const mod = result.modifiedMatrices[name];
+
       for (let i = 0; i < orig.length; i++) {
         for (let j = 0; j < orig[i].length; j++) {
-          if (Math.abs(orig[i][j] - mod[i][j]) > 1e-9) {
+          if (Math.abs(orig[i][j]! - mod[i][j]!) > 1e-9) {
             anyChanged = true;
           }
         }
       }
     }
+
     expect(anyChanged).toBe(true);
   });
 });

@@ -133,7 +133,7 @@ describe('solveAHP', () => {
   const alternativeNames = ['A1', 'A2', 'A3'];
 
   it('returns a complete AhpResult', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
 
     expect(result.criteriaWeights).toHaveLength(3);
     expect(result.globalPriorities).toHaveLength(3);
@@ -142,25 +142,25 @@ describe('solveAHP', () => {
   });
 
   it('criteria weights sum to 1', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     const sum = result.criteriaWeights.reduce((a, b) => a + b, 0);
     expect(sum).toBeCloseTo(1, 5);
   });
 
   it('global priorities are sorted descending', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     for (let i = 1; i < result.globalPriorities.length; i++) {
       expect(result.globalPriorities[i - 1].priority).toBeGreaterThanOrEqual(result.globalPriorities[i].priority);
     }
   });
 
   it('winner is the first in sorted global priorities', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     expect(result.winner).toBe(result.globalPriorities[0].name);
   });
 
   it('has consistency ratios for criteria and each alternative matrix', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     expect(result.consistencyRatios).toHaveProperty('criteria');
     for (const name of criteriaNames) {
       expect(result.consistencyRatios).toHaveProperty(name);
@@ -168,12 +168,12 @@ describe('solveAHP', () => {
   });
 
   it('marks consistent matrices as consistent', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     expect(result.isConsistent).toBe(true);
   });
 
   it('local priorities per criterion sum to ~1', () => {
-    const result = solveAHP(CRITERIA_MATRIX, ALT_MATRICES, criteriaNames, alternativeNames);
+    const result = solveAHP({ criteriaMatrix: CRITERIA_MATRIX, alternativeMatrices: ALT_MATRICES, criteriaNames, alternativeNames });
     for (const name of criteriaNames) {
       const sum = result.localPriorities[name].reduce((a, b) => a + b, 0);
       expect(sum).toBeCloseTo(1, 5);

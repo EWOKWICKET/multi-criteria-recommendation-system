@@ -34,7 +34,10 @@ export function calculatePriorityVector(matrix: PairwiseMatrix): number[] {
  */
 export function calculateConsistencyRatio(matrix: PairwiseMatrix, priorities: number[]): number {
   const n = matrix.length;
-  if (n <= 2) return 0;
+
+  if (n <= 2) {
+    return 0;
+  }
 
   // Weighted sum vector: A * w
   const weightedSum = matrix.map((row) => row.reduce((sum, val, j) => sum + val * priorities[j], 0));
@@ -54,11 +57,12 @@ export function calculateGlobalPriorities(
   localPriorities: Record<string, number[]>,
   criteriaNames: string[]
 ): number[] {
-  const altCount = localPriorities[criteriaNames[0]].length;
+  const altCount = (localPriorities[criteriaNames[0]] ?? []).length;
   const globals = new Array<number>(altCount).fill(0);
 
   for (let k = 0; k < criteriaNames.length; k++) {
-    const lp = localPriorities[criteriaNames[k]];
+    const lp = localPriorities[criteriaNames[k]] ?? [];
+
     for (let j = 0; j < altCount; j++) {
       globals[j] += weights[k] * lp[j];
     }
@@ -67,13 +71,20 @@ export function calculateGlobalPriorities(
   return globals;
 }
 
+type SolveAHPParams = {
+  criteriaMatrix: PairwiseMatrix;
+  alternativeMatrices: AlternativeMatrices;
+  criteriaNames: string[];
+  alternativeNames: string[];
+};
+
 /** Full AHP pipeline: PCMs → priorities → CR → global ranking */
-export function solveAHP(
-  criteriaMatrix: PairwiseMatrix,
-  alternativeMatrices: AlternativeMatrices,
-  criteriaNames: string[],
-  alternativeNames: string[]
-): AhpResult {
+export function solveAHP({
+  criteriaMatrix,
+  alternativeMatrices,
+  criteriaNames,
+  alternativeNames,
+}: SolveAHPParams): AhpResult {
   const criteriaWeights = calculatePriorityVector(criteriaMatrix);
   const criteriaCR = calculateConsistencyRatio(criteriaMatrix, criteriaWeights);
 
@@ -82,7 +93,7 @@ export function solveAHP(
   let allConsistent = criteriaCR <= CR_THRESHOLD;
 
   for (const name of criteriaNames) {
-    const matrix = alternativeMatrices[name];
+    const matrix = alternativeMatrices[name] ?? [];
     const priorities = calculatePriorityVector(matrix);
     const cr = calculateConsistencyRatio(matrix, priorities);
 
@@ -103,7 +114,7 @@ export function solveAHP(
 
   const sorted = [...globalPriorities].sort((a, b) => b.priority - a.priority);
 
-  return {
+  const result: AhpResult = {
     criteriaWeights,
     localPriorities,
     globalPriorities: sorted,
@@ -111,4 +122,6 @@ export function solveAHP(
     consistencyRatios,
     isConsistent: allConsistent,
   };
+
+  return result;
 }

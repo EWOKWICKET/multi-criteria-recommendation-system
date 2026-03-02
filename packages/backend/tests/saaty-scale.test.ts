@@ -58,7 +58,7 @@ describe('applySaatyStep', () => {
       [1, 3],
       [1 / 3, 1],
     ];
-    const result = applySaatyStep(matrix, 0, 1, StepDirection.Up);
+    const result = applySaatyStep({ matrix, row: 0, col: 1, direction: StepDirection.Up });
 
     expect(result[0][1]).toBe(4);
     expect(result[1][0]).toBeCloseTo(1 / 4);
@@ -69,7 +69,7 @@ describe('applySaatyStep', () => {
       [1, 3],
       [1 / 3, 1],
     ];
-    applySaatyStep(matrix, 0, 1, StepDirection.Up);
+    applySaatyStep({ matrix, row: 0, col: 1, direction: StepDirection.Up });
 
     expect(matrix[0][1]).toBe(3);
     expect(matrix[1][0]).toBeCloseTo(1 / 3);
@@ -80,7 +80,7 @@ describe('applySaatyStep', () => {
       [1, 5],
       [1 / 5, 1],
     ];
-    const result = applySaatyStep(matrix, 0, 1, StepDirection.Down);
+    const result = applySaatyStep({ matrix, row: 0, col: 1, direction: StepDirection.Down });
 
     expect(result[0][1]).toBe(4);
     expect(result[1][0]).toBeCloseTo(1 / 4);
@@ -92,7 +92,7 @@ describe('applySaatyStep', () => {
       [0.5, 1, 2],
       [1 / 3, 0.5, 1],
     ];
-    const result = applySaatyStep(matrix, 0, 2, StepDirection.Up);
+    const result = applySaatyStep({ matrix, row: 0, col: 2, direction: StepDirection.Up });
 
     expect(result[0][0]).toBe(1);
     expect(result[1][1]).toBe(1);

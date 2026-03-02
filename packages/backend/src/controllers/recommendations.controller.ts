@@ -4,32 +4,32 @@ import { globalLeader as globalLeaderService } from '../services/recommendations
 
 type RecRequest = FastifyRequest<{ Body: RecommendationRequest }>;
 
-export async function globalLeader(request: RecRequest, reply: FastifyReply) {
+export async function globalLeader(request: RecRequest, reply: FastifyReply): Promise<void> {
   const { criteriaMatrix, alternativeMatrices, criteriaNames, alternativeNames, targetAlternativeIndex } = request.body;
 
-  const result = globalLeaderService(
+  const result = globalLeaderService({
     criteriaMatrix,
     alternativeMatrices,
     criteriaNames,
     alternativeNames,
-    targetAlternativeIndex
-  );
+    targetIndex: targetAlternativeIndex,
+  });
 
   return reply.send(result);
 }
 
-export async function localLeader(request: RecRequest, reply: FastifyReply) {
+export async function localLeader(_request: RecRequest, reply: FastifyReply): Promise<void> {
   return reply.status(501).send({ error: 'Not implemented yet' });
 }
 
-export async function globalAverage(request: RecRequest, reply: FastifyReply) {
+export async function globalAverage(_request: RecRequest, reply: FastifyReply): Promise<void> {
   return reply.status(501).send({ error: 'Not implemented yet' });
 }
 
-export async function localAverage(request: RecRequest, reply: FastifyReply) {
+export async function localAverage(_request: RecRequest, reply: FastifyReply): Promise<void> {
   return reply.status(501).send({ error: 'Not implemented yet' });
 }
 
-export async function adaptiveStrategy(request: RecRequest, reply: FastifyReply) {
+export async function adaptiveStrategy(_request: RecRequest, reply: FastifyReply): Promise<void> {
   return reply.status(501).send({ error: 'Not implemented yet' });
 }

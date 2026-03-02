@@ -1,9 +1,9 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { registerCors } from './plugins/index.js';
 import { ahpRoutes, recommendationsRoutes } from './routes/index.js';
 
-export function buildApp() {
+export function buildApp(): FastifyInstance {
   const app = Fastify({
     logger: true,
   }).withTypeProvider<TypeBoxTypeProvider>();
