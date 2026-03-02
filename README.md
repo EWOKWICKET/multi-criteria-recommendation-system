@@ -51,12 +51,12 @@ npm run dev:frontend
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/ahp/solve` | Baseline AHP: compute priorities, CR, and rank alternatives |
-| `POST` | `/api/recommendations/scenario-1` | Global Leader: match the overall winner |
-| `POST` | `/api/recommendations/scenario-2` | Local Leader: match best-per-criterion |
-| `POST` | `/api/recommendations/scenario-3` | Global Average: match the median alternative |
-| `POST` | `/api/recommendations/scenario-4` | Local Average: match per-criterion average |
-| `POST` | `/api/recommendations/scenario-5` | Adaptive Strategy: greedy min-cost optimization |
+| `POST` | `/api/ahp/solve` | Baseline AHP: compute priorities, consistency ratios, and rank alternatives |
+| `POST` | `/api/recommendations/global-leader` | Match the overall winner's local priorities |
+| `POST` | `/api/recommendations/local-leader` | Match the best alternative per criterion |
+| `POST` | `/api/recommendations/global-average` | Match the median-ranked alternative |
+| `POST` | `/api/recommendations/local-average` | Match per-criterion average priorities |
+| `POST` | `/api/recommendations/adaptive-strategy` | Greedy min-cost optimization with early stopping |
 
 ## Testing
 

@@ -1,8 +1,8 @@
 export { solveAhp } from './ahp.controller.js';
 export {
-  scenario1,
-  scenario2,
-  scenario3,
-  scenario4,
-  scenario5,
+  globalLeader,
+  localLeader,
+  globalAverage,
+  localAverage,
+  adaptiveStrategy,
 } from './recommendations.controller.js';
