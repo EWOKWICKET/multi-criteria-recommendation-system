@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { StepDirection, SAATY_SCALE, findClosestSaatyIndex, getNextSaatyValue, applySaatyStep } from '../src/utils/index.js';
+import { StepDirection, SAATY_SCALE, findClosestSaatyIndex, getNextSaatyValue, applySaatyStep } from '../../src/utils';
 
 describe('SAATY_SCALE', () => {
   it('has 17 elements from 1/9 to 9', () => {

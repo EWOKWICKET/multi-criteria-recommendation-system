@@ -5,7 +5,7 @@ import {
   calculateConsistencyRatio,
   calculateGlobalPriorities,
   solveAHP,
-} from '../src/services/baseline/index.js';
+} from '../../src/services/baseline';
 
 // 3x3 criteria matrix from Saaty's classic example
 const CRITERIA_MATRIX = [

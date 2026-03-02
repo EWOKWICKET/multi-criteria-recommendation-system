@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { localLeader } from '../src/services/recommendations/index.js';
+import { globalAverage } from '../../src/services/recommendations';
 
 const CRITERIA_MATRIX = [
   [1, 3, 5],
@@ -36,25 +36,17 @@ const makeParams = (targetIndex: number) => ({
   targetIndex,
 });
 
-describe('localLeader (Algorithm 2)', () => {
-  it('still generates steps for the global winner since it is not best in every criterion', () => {
-    const result = localLeader(makeParams(0));
-
-    // A1 is the global winner but not the local leader in Quality (A2) or Delivery (A3)
-    expect(result.totalSteps).toBeGreaterThan(0);
-    expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);
-  });
-
-  it('generates steps to improve a losing alternative', () => {
-    const result = localLeader(makeParams(2));
+describe('globalAverage (Algorithm 3)', () => {
+  it('generates steps to improve a weak alternative toward the median', () => {
+    const result = globalAverage(makeParams(2));
 
     expect(result.totalSteps).toBeGreaterThan(0);
     expect(result.steps).toHaveLength(result.totalSteps);
-    expect(result.originalGlobalPriority).toBeLessThan(result.leaderGlobalPriority);
+    expect(result.newGlobalPriority).toBeGreaterThan(result.originalGlobalPriority);
   });
 
   it('steps are sequentially numbered and have valid fields', () => {
-    const result = localLeader(makeParams(2));
+    const result = globalAverage(makeParams(2));
 
     for (let i = 0; i < result.steps.length; i++) {
       const step = result.steps[i];
@@ -65,8 +57,14 @@ describe('localLeader (Algorithm 2)', () => {
     }
   });
 
+  it('improves global priority for a middle-ranked alternative', () => {
+    const result = globalAverage(makeParams(1));
+
+    expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);
+  });
+
   it('new global priority matches the last step', () => {
-    const result = localLeader(makeParams(2));
+    const result = globalAverage(makeParams(2));
 
     if (result.steps.length > 0) {
       expect(result.newGlobalPriority).toBeCloseTo(result.steps[result.steps.length - 1].globalPriorityAfterStep);
@@ -74,7 +72,7 @@ describe('localLeader (Algorithm 2)', () => {
   });
 
   it('returns modified matrices that differ from originals', () => {
-    const result = localLeader(makeParams(2));
+    const result = globalAverage(makeParams(2));
 
     let anyChanged = false;
     for (const name of CRITERIA_NAMES) {
@@ -93,9 +91,12 @@ describe('localLeader (Algorithm 2)', () => {
     expect(anyChanged).toBe(true);
   });
 
-  it('may produce different results than global-leader for the same input', () => {
-    const result = localLeader(makeParams(1));
+  it('returns no steps when target is the median alternative', () => {
+    // With 3 alternatives sorted by global priority, index 1 (A2) is the median
+    const result = globalAverage(makeParams(1));
 
-    expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);
+    // A2 is the median — comparing to itself yields no criteria to improve
+    expect(result.totalSteps).toBe(0);
+    expect(result.steps).toHaveLength(0);
   });
 });

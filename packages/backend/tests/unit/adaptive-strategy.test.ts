@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { adaptiveStrategy } from '../src/services/recommendations/index.js';
-import { calculatePriorityVector, calculateGlobalPriorities } from '../src/services/baseline/index.js';
-import { SAATY_SCALE, findClosestSaatyIndex } from '../src/utils/index.js';
+import { adaptiveStrategy } from '../../src/services/recommendations';
+import { calculatePriorityVector, calculateGlobalPriorities } from '../../src/services/baseline';
+import { SAATY_SCALE, findClosestSaatyIndex } from '../../src/utils';
 
 const CRITERIA_MATRIX = [
   [1, 3, 5],
@@ -199,7 +199,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       const targetIndex = 2;
 
       // Replay the algorithm: rebuild matrices step by step
-      const criteriaWeights = calculatePriorityVector(CRITERIA_MATRIX);
       const replayMatrices: Record<string, number[][]> = {};
       const replayLP: Record<string, number[]> = {};
 

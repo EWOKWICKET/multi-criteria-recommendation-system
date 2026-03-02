@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { globalLeader } from '../src/services/recommendations/index.js';
+import { globalLeader } from '../../src/services/recommendations';
 
 const CRITERIA_MATRIX = [
   [1, 3, 5],

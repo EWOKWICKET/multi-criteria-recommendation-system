@@ -12,6 +12,7 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'error',
       'max-params': ['error', { max: 3 }],
       'padding-line-between-statements': ['error', { blankLine: 'always', prev: '*', next: 'return' }],
