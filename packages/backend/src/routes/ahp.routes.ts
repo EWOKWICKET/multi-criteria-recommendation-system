@@ -1,0 +1,13 @@
+import type { FastifyInstance } from 'fastify';
+import { AhpSolveRequestSchema, AhpSolveResponseSchema } from '../schemas/index.js';
+import { solveAhp } from '../controllers/index.js';
+
+export async function ahpRoutes(fastify: FastifyInstance) {
+  fastify.post('/solve', {
+    schema: {
+      body: AhpSolveRequestSchema,
+      response: { 200: AhpSolveResponseSchema },
+    },
+    handler: solveAhp,
+  });
+}
