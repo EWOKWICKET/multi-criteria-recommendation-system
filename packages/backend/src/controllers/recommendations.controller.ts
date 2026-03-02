@@ -5,6 +5,7 @@ import {
   localLeader as localLeaderService,
   localAverage as localAverageService,
   globalAverage as globalAverageService,
+  adaptiveStrategy as adaptiveStrategyService,
 } from '../services/recommendations/index.js';
 
 type RecRequest = FastifyRequest<{ Body: RecommendationRequest }>;
@@ -65,6 +66,16 @@ export async function localAverage(request: RecRequest, reply: FastifyReply): Pr
   return reply.send(result);
 }
 
-export async function adaptiveStrategy(_request: RecRequest, reply: FastifyReply): Promise<void> {
-  return reply.status(501).send({ error: 'Not implemented yet' });
+export async function adaptiveStrategy(request: RecRequest, reply: FastifyReply): Promise<void> {
+  const { criteriaMatrix, alternativeMatrices, criteriaNames, alternativeNames, targetAlternativeIndex } = request.body;
+
+  const result = adaptiveStrategyService({
+    criteriaMatrix,
+    alternativeMatrices,
+    criteriaNames,
+    alternativeNames,
+    targetIndex: targetAlternativeIndex,
+  });
+
+  return reply.send(result);
 }
