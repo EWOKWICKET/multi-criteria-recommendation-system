@@ -1,1 +1,1 @@
-export {} from './saaty-scale.js';
+export { StepDirection, SAATY_SCALE, findClosestSaatyIndex, getNextSaatyValue, applySaatyStep } from './saaty-scale.js';
