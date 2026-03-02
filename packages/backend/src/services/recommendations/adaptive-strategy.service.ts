@@ -120,8 +120,17 @@ type StageParams = {
  * Returns true if target became the winner during this stage.
  */
 function runStage1(params: StageParams): boolean {
-  const { criteriaNames, alternativeNames, localPriorities, currentMatrices, criteriaWeights, targetIndex, bestIndex, steps, stepCounter } =
-    params;
+  const {
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    bestIndex,
+    steps,
+    stepCounter,
+  } = params;
 
   while (true) {
     // Find the weakest criterion (largest deficit below average)
@@ -173,8 +182,17 @@ function runStage1(params: StageParams): boolean {
  * Stops when target becomes the winner or no more steps possible.
  */
 function runStage2(params: StageParams): void {
-  const { criteriaNames, alternativeNames, localPriorities, currentMatrices, criteriaWeights, targetIndex, bestIndex, steps, stepCounter } =
-    params;
+  const {
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    bestIndex,
+    steps,
+    stepCounter,
+  } = params;
 
   while (true) {
     let bestEfficiency = -1;
@@ -287,8 +305,18 @@ type ApplySpecificStepParams = ApplyOneStepParams & { col: number };
 
 /** Apply one position step on the given criterion and column. */
 function applySpecificStep(params: ApplySpecificStepParams): boolean {
-  const { criterion, col, alternativeNames, localPriorities, currentMatrices, criteriaWeights, criteriaNames, targetIndex, steps, stepCounter } =
-    params;
+  const {
+    criterion,
+    col,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    criteriaNames,
+    targetIndex,
+    steps,
+    stepCounter,
+  } = params;
 
   const oldValue = currentMatrices[criterion][targetIndex][col];
 

@@ -213,7 +213,9 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         const step = result.steps[s];
 
         // Apply the step to replay
-        const scaleIdx = findClosestSaatyIndex(replayMatrices[step.criterion][targetIndex][ALT_NAMES.indexOf(step.comparedTo)]);
+        const scaleIdx = findClosestSaatyIndex(
+          replayMatrices[step.criterion][targetIndex][ALT_NAMES.indexOf(step.comparedTo)]
+        );
         const colIdx = ALT_NAMES.indexOf(step.comparedTo);
         const newVal = SAATY_SCALE[scaleIdx + 1];
         replayMatrices[step.criterion][targetIndex][colIdx] = newVal;
@@ -245,7 +247,9 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
 
       // Each stage 2 step should improve global priority (greedy picks max efficiency)
       for (let i = 1; i < stage2Steps.length; i++) {
-        expect(stage2Steps[i].globalPriorityAfterStep).toBeGreaterThanOrEqual(stage2Steps[i - 1].globalPriorityAfterStep);
+        expect(stage2Steps[i].globalPriorityAfterStep).toBeGreaterThanOrEqual(
+          stage2Steps[i - 1].globalPriorityAfterStep
+        );
       }
     });
   });
