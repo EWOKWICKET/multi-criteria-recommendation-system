@@ -16,6 +16,7 @@ export type RecommendationResult = {
   originalGlobalPriority: number;
   newGlobalPriority: number;
   leaderGlobalPriority: number;
+  leaderGlobalPriorityAfter: number;
   isWinner: boolean;
   totalSteps: number;
   steps: PositionStep[];

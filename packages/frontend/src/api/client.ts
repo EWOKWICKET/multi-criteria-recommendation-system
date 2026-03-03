@@ -34,6 +34,7 @@ type RecommendationResponse = {
   originalGlobalPriority: number;
   newGlobalPriority: number;
   leaderGlobalPriority: number;
+  leaderGlobalPriorityAfter: number;
   isWinner: boolean;
   totalSteps: number;
   steps: PositionStep[];

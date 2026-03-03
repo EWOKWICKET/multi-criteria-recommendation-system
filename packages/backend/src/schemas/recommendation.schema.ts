@@ -26,6 +26,7 @@ export const RecommendationResponseSchema = Type.Object({
   originalGlobalPriority: Type.Number(),
   newGlobalPriority: Type.Number(),
   leaderGlobalPriority: Type.Number(),
+  leaderGlobalPriorityAfter: Type.Number(),
   isWinner: Type.Boolean(),
   totalSteps: Type.Integer(),
   steps: Type.Array(PositionStepSchema),

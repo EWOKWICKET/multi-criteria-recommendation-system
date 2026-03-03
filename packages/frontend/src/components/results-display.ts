@@ -85,7 +85,8 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
       <div class="summary">
         <p>Original global priority: <strong>${result.originalGlobalPriority.toFixed(4)}</strong></p>
         <p>New global priority: <strong>${result.newGlobalPriority.toFixed(4)}</strong></p>
-        <p>Leader global priority: <strong>${result.leaderGlobalPriority.toFixed(4)}</strong></p>
+        <p>Leader global priority (before): <strong>${result.leaderGlobalPriority.toFixed(4)}</strong></p>
+        <p>Leader global priority (after): <strong>${result.leaderGlobalPriorityAfter.toFixed(4)}</strong></p>
         <p>Became winner: <strong class="${result.isWinner ? 'consistent' : 'inconsistent'}">${result.isWinner ? 'Yes' : 'No'}</strong></p>
         <p>Total steps: <strong>${result.totalSteps}</strong></p>
       </div>

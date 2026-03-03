@@ -2,6 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { PositionStep, RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
+import { isCurrentWinner, improveUntilWinner } from './improve-until-winner.js';
 
 type GlobalAverageParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -31,11 +32,12 @@ export function globalAverage({
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
-  // Find global winner
   let bestIndex = 0;
+
   for (let i = 1; i < globalValues.length; i++) {
     if (globalValues[i] > globalValues[bestIndex]) bestIndex = i;
   }
+
   const leaderGlobalPriority = globalValues[bestIndex];
 
   // Find median-ranked alternative
@@ -46,13 +48,8 @@ export function globalAverage({
   const steps: PositionStep[] = [];
   let stepNumber = 0;
 
-  // For each criterion, improve target to match the median alternative's local priority
+  // Phase 1: Match the median alternative's local priorities per criterion
   for (const criterion of criteriaNames) {
-    const medianLP = (localPriorities[criterion] ?? [])[medianIndex];
-    const targetLP = (localPriorities[criterion] ?? [])[targetIndex];
-
-    if (targetLP >= medianLP) continue;
-
     while ((localPriorities[criterion] ?? [])[targetIndex] < (localPriorities[criterion] ?? [])[medianIndex]) {
       let bestCol = -1;
       let lowestScaleIndex = SAATY_SCALE.length;
@@ -87,35 +84,54 @@ export function globalAverage({
       const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
 
       stepNumber++;
-      const localPriorityAfterStep = (localPriorities[criterion] ?? [])[targetIndex];
-      const globalPriorityAfterStep = newGlobals[targetIndex];
-
-      const step: PositionStep = {
+      steps.push({
         stepNumber,
         criterion,
         comparedTo: alternativeNames[bestCol],
         oldValue,
         newValue,
-        localPriorityAfterStep,
-        globalPriorityAfterStep,
-      };
+        localPriorityAfterStep: (localPriorities[criterion] ?? [])[targetIndex],
+        globalPriorityAfterStep: newGlobals[targetIndex],
+      });
 
-      steps.push(step);
+      if (isCurrentWinner(newGlobals, targetIndex)) {
+        return {
+          originalGlobalPriority,
+          newGlobalPriority: newGlobals[targetIndex],
+          leaderGlobalPriority,
+          leaderGlobalPriorityAfter: newGlobals[bestIndex],
+          isWinner: true,
+          totalSteps: steps.length,
+          steps,
+          modifiedMatrices: currentMatrices,
+        };
+      }
     }
   }
+
+  // Phase 2: If still not winner, keep improving greedily
+  improveUntilWinner({
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    steps,
+    stepNumber: steps.length,
+  });
 
   const finalGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const newGlobalPriority = finalGlobals[targetIndex];
 
-  const result: RecommendationResult = {
+  return {
     originalGlobalPriority,
     newGlobalPriority,
     leaderGlobalPriority,
-    isWinner: newGlobalPriority >= leaderGlobalPriority,
+    leaderGlobalPriorityAfter: finalGlobals[bestIndex],
+    isWinner: isCurrentWinner(finalGlobals, targetIndex),
     totalSteps: steps.length,
     steps,
     modifiedMatrices: currentMatrices,
   };
-
-  return result;
 }

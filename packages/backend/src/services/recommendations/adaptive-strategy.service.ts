@@ -2,6 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { PositionStep, RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
+import { isCurrentWinner } from './improve-until-winner.js';
 
 type AdaptiveStrategyParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -44,6 +45,7 @@ export function adaptiveStrategy({
       originalGlobalPriority,
       newGlobalPriority: originalGlobalPriority,
       leaderGlobalPriority,
+      leaderGlobalPriorityAfter: leaderGlobalPriority,
       isWinner: true,
       totalSteps: 0,
       steps: [],
@@ -64,7 +66,6 @@ export function adaptiveStrategy({
     currentMatrices,
     criteriaWeights,
     targetIndex,
-    bestIndex,
     steps,
     stepCounter: { value: stepNumber },
   });
@@ -80,7 +81,6 @@ export function adaptiveStrategy({
       currentMatrices,
       criteriaWeights,
       targetIndex,
-      bestIndex,
       steps,
       stepCounter: { value: stepNumber },
     });
@@ -93,7 +93,8 @@ export function adaptiveStrategy({
     originalGlobalPriority,
     newGlobalPriority,
     leaderGlobalPriority,
-    isWinner: newGlobalPriority >= leaderGlobalPriority,
+    leaderGlobalPriorityAfter: finalGlobals[bestIndex],
+    isWinner: isCurrentWinner(finalGlobals, targetIndex),
     totalSteps: steps.length,
     steps,
     modifiedMatrices: currentMatrices,
@@ -109,7 +110,6 @@ type StageParams = {
   currentMatrices: Record<string, PairwiseMatrix>;
   criteriaWeights: number[];
   targetIndex: number;
-  bestIndex: number;
   steps: PositionStep[];
   stepCounter: { value: number };
 };
@@ -127,7 +127,6 @@ function runStage1(params: StageParams): boolean {
     currentMatrices,
     criteriaWeights,
     targetIndex,
-    bestIndex,
     steps,
     stepCounter,
   } = params;
@@ -168,7 +167,7 @@ function runStage1(params: StageParams): boolean {
 
     // Check early stopping
     const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-    if (newGlobals[targetIndex] >= newGlobals[bestIndex]) {
+    if (isCurrentWinner(newGlobals, targetIndex)) {
       return true;
     }
   }
@@ -189,7 +188,6 @@ function runStage2(params: StageParams): void {
     currentMatrices,
     criteriaWeights,
     targetIndex,
-    bestIndex,
     steps,
     stepCounter,
   } = params;
@@ -259,7 +257,7 @@ function runStage2(params: StageParams): void {
 
     // Check early stopping
     const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-    if (newGlobals[targetIndex] >= newGlobals[bestIndex]) {
+    if (isCurrentWinner(newGlobals, targetIndex)) {
       return;
     }
   }
