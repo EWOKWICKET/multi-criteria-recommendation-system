@@ -4,12 +4,12 @@ import { createCriteriaForm } from '../components/criteria-form';
 import { createMatrixInput, readMatrix } from '../components/matrix-input';
 import { renderRecommendationResults } from '../components/results-display';
 
-const ALGORITHMS: { value: Algorithm; label: string }[] = [
-  { value: 'global-leader', label: 'Global Leader' },
-  { value: 'local-leader', label: 'Local Leader' },
-  { value: 'global-average', label: 'Global Average' },
-  { value: 'local-average', label: 'Local Average' },
-  { value: 'adaptive-strategy', label: 'Adaptive Strategy' },
+const ALGORITHMS: { value: Algorithm; label: string; description: string }[] = [
+  { value: 'global-leader', label: 'Global Leader', description: 'Match the overall winner' },
+  { value: 'local-leader', label: 'Local Leader', description: 'Match the best per criterion' },
+  { value: 'global-average', label: 'Global Average', description: 'Match the median-ranked alternative' },
+  { value: 'local-average', label: 'Local Average', description: 'Match the per-criterion average' },
+  { value: 'adaptive-strategy', label: 'Adaptive Strategy', description: 'Greedy min-cost optimization' },
 ];
 
 export function renderRecommendations(root: HTMLElement): void {
@@ -23,23 +23,27 @@ export function renderRecommendations(root: HTMLElement): void {
 
   createCriteriaForm(root.querySelector('#criteria-form')!, {
     onUpdate(criteria, alternatives) {
-      buildAlgorithmPicker(root.querySelector('#algorithm-picker')!);
+      buildAlgorithmPicker(root.querySelector('#algorithm-picker')!, alternatives);
       buildMatrices(root.querySelector('#matrices-container')!, criteria, alternatives);
     },
   });
 }
 
-function buildAlgorithmPicker(container: HTMLElement): void {
+function buildAlgorithmPicker(container: HTMLElement, alternatives: string[]): void {
+  const algorithmOptions = ALGORITHMS.map(
+    (a) => `<option value="${a.value}">${a.label} — ${a.description}</option>`
+  ).join('');
+
+  const targetOptions = alternatives.map((name, i) => `<option value="${i}">${name} (index ${i})</option>`).join('');
+
   container.innerHTML = `
     <div class="form-group">
       <label>Algorithm:</label>
-      <select id="algorithm-select">
-        ${ALGORITHMS.map((a) => `<option value="${a.value}">${a.label}</option>`).join('')}
-      </select>
+      <select id="algorithm-select">${algorithmOptions}</select>
     </div>
     <div class="form-group">
-      <label>Target alternative index (0-based):</label>
-      <input type="number" id="target-index-input" value="0" min="0" />
+      <label>Target alternative:</label>
+      <select id="target-index-input">${targetOptions}</select>
     </div>
   `;
 }
@@ -65,7 +69,7 @@ async function handleRun(container: HTMLElement): Promise<void> {
   const criteriaInput = document.querySelector<HTMLInputElement>('#criteria-input')!;
   const alternativesInput = document.querySelector<HTMLInputElement>('#alternatives-input')!;
   const algorithmSelect = document.querySelector<HTMLSelectElement>('#algorithm-select')!;
-  const targetInput = document.querySelector<HTMLInputElement>('#target-index-input')!;
+  const targetSelect = document.querySelector<HTMLSelectElement>('#target-index-input')!;
 
   const criteriaNames = criteriaInput.value
     .split(',')
@@ -84,7 +88,7 @@ async function handleRun(container: HTMLElement): Promise<void> {
   }
 
   const algorithm = algorithmSelect.value as Algorithm;
-  const targetAlternativeIndex = parseInt(targetInput.value, 10);
+  const targetAlternativeIndex = parseInt(targetSelect.value, 10);
 
   const resultsContainer = document.querySelector('#results-container')!;
 
