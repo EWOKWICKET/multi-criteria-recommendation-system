@@ -1,4 +1,19 @@
-// Entry point — page routing implemented in Phase 4
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <p>Frontend scaffold ready. Pages will be implemented in Phase 4.</p>
-`;
+import { renderBaseline } from './pages/baseline';
+import { renderRecommendations } from './pages/recommendations';
+
+const app = document.querySelector<HTMLDivElement>('#app')!;
+
+function route(): void {
+  const hash = window.location.hash || '#baseline';
+
+  switch (hash) {
+    case '#recommendations':
+      renderRecommendations(app);
+      break;
+    default:
+      renderBaseline(app);
+  }
+}
+
+window.addEventListener('hashchange', route);
+route();
