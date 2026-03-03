@@ -1,8 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { RecommendationRequestSchema, RecommendationResponseSchema } from '../schemas/index.js';
 import { globalLeader, localLeader, globalAverage, localAverage, adaptiveStrategy } from '../controllers/index.js';
+import { recommendationValidationHook } from '../hooks/validation.hook.js';
 
 export async function recommendationsRoutes(fastify: FastifyInstance): Promise<void> {
+  fastify.addHook('preHandler', recommendationValidationHook);
+
   const schema = {
     body: RecommendationRequestSchema,
     response: { 200: RecommendationResponseSchema },

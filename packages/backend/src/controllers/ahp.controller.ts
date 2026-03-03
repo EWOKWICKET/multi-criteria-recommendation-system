@@ -9,5 +9,15 @@ export async function solveAhp(request: AhpSolveRequestType, reply: FastifyReply
 
   const result = solveAHP({ criteriaMatrix, alternativeMatrices, criteriaNames, alternativeNames });
 
-  return reply.send(result);
+  const warnings: string[] = [];
+
+  if (!result.isConsistent) {
+    const inconsistent = Object.entries(result.consistencyRatios)
+      .filter(([_, cr]) => cr > 0.1)
+      .map(([name]) => name);
+
+    warnings.push(`Consistency ratio exceeds 0.1 for: ${inconsistent.join(', ')}. Results may be unreliable.`);
+  }
+
+  return reply.send({ ...result, ...(warnings.length > 0 ? { warnings } : {}) });
 }
