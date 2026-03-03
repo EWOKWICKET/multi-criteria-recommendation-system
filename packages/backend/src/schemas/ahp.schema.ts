@@ -23,6 +23,7 @@ export const AhpSolveResponseSchema = Type.Object({
   winner: Type.String(),
   consistencyRatios: Type.Record(Type.String(), Type.Number()),
   isConsistent: Type.Boolean(),
+  warnings: Type.Optional(Type.Array(Type.String())),
 });
 
 export type AhpSolveResponse = Static<typeof AhpSolveResponseSchema>;
