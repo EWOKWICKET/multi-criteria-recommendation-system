@@ -1,4 +1,11 @@
-export function createMatrixInput(container: HTMLElement, size: number, label: string): void {
+type MatrixInputParams = {
+  container: HTMLElement;
+  size: number;
+  label: string;
+  names: string[];
+};
+
+export function createMatrixInput({ container, size, label, names }: MatrixInputParams): void {
   const wrapper = document.createElement('div');
   wrapper.className = 'matrix-input';
 
@@ -9,8 +16,25 @@ export function createMatrixInput(container: HTMLElement, size: number, label: s
   const table = document.createElement('table');
   table.dataset['label'] = label;
 
+  // Header row with names
+  const thead = document.createElement('tr');
+  thead.appendChild(document.createElement('th')); // empty corner cell
+
+  for (const name of names) {
+    const th = document.createElement('th');
+    th.textContent = name;
+    thead.appendChild(th);
+  }
+
+  table.appendChild(thead);
+
   for (let i = 0; i < size; i++) {
     const row = document.createElement('tr');
+
+    // Row label
+    const rowLabel = document.createElement('th');
+    rowLabel.textContent = names[i] ?? `${i + 1}`;
+    row.appendChild(rowLabel);
 
     for (let j = 0; j < size; j++) {
       const cell = document.createElement('td');
@@ -59,7 +83,10 @@ export function readMatrix(table: HTMLTableElement): number[][] {
   const rows = table.querySelectorAll('tr');
   const matrix: number[][] = [];
 
-  rows.forEach((row) => {
+  // Skip first row (header)
+  rows.forEach((row, idx) => {
+    if (idx === 0) return;
+
     const cells: number[] = [];
 
     row.querySelectorAll<HTMLInputElement>('input').forEach((input) => {

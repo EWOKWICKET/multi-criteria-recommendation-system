@@ -21,10 +21,10 @@ export function renderBaseline(root: HTMLElement): void {
 function buildMatrices(container: HTMLElement, criteria: string[], alternatives: string[]): void {
   container.innerHTML = '<h3>Pairwise Comparison Matrices</h3>';
 
-  createMatrixInput(container, criteria.length, 'Criteria');
+  createMatrixInput({ container, size: criteria.length, label: 'Criteria', names: criteria });
 
   for (const name of criteria) {
-    createMatrixInput(container, alternatives.length, name);
+    createMatrixInput({ container, size: alternatives.length, label: name, names: alternatives });
   }
 
   const solveBtn = document.createElement('button');

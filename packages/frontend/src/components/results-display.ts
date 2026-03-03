@@ -28,13 +28,52 @@ export function renderAhpResults(container: HTMLElement, result: AhpResponse): v
     <p><strong>Winner: ${result.winner}</strong></p>
 
     <h4>Criteria Weights</h4>
-    <ul>`;
+    <table class="results-table">
+      <thead><tr><th>Criterion</th><th>Weight</th><th>CR</th></tr></thead>
+      <tbody>
+  `;
 
-  Object.entries(result.consistencyRatios).forEach(([name, cr]) => {
-    html += `<li>${name}: CR = ${cr.toFixed(4)}</li>`;
+  const criteriaNames = Object.keys(result.localPriorities);
+  result.criteriaWeights.forEach((w, i) => {
+    const name = criteriaNames[i] ?? `C${i + 1}`;
+    const cr = result.consistencyRatios[name] ?? 0;
+
+    html += `<tr>
+      <td>${name}</td>
+      <td>${w.toFixed(4)}</td>
+      <td>${cr.toFixed(4)}</td>
+    </tr>`;
   });
 
-  html += `</ul></div>`;
+  html += `</tbody></table>
+    <p>Criteria CR: ${(result.consistencyRatios['criteria'] ?? 0).toFixed(4)}</p>
+
+    <h4>Local Priorities</h4>
+    <table class="results-table">
+      <thead><tr><th>Alternative</th>`;
+
+  for (const name of criteriaNames) {
+    html += `<th>${name}</th>`;
+  }
+
+  html += `</tr></thead><tbody>`;
+
+  const altNames = result.globalPriorities.map((g) => g.name);
+  const firstCriterion = criteriaNames[0];
+  const originalAltCount = firstCriterion ? (result.localPriorities[firstCriterion]?.length ?? 0) : 0;
+
+  for (let j = 0; j < originalAltCount; j++) {
+    html += `<tr><td>${altNames[j] ?? `A${j + 1}`}</td>`;
+
+    for (const criterion of criteriaNames) {
+      const lp = result.localPriorities[criterion];
+      html += `<td>${lp ? (lp[j]?.toFixed(4) ?? '-') : '-'}</td>`;
+    }
+
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table></div>`;
 
   container.innerHTML = html;
 }
