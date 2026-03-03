@@ -5,7 +5,7 @@ import { validateAhpInput, validateRecommendationInput } from '../utils/index.js
 
 export async function ahpValidationHook(
   request: FastifyRequest<{ Body: AhpSolveRequest }>,
-  reply: FastifyReply,
+  reply: FastifyReply
 ): Promise<void> {
   const error = validateAhpInput(request.body);
 
@@ -16,7 +16,7 @@ export async function ahpValidationHook(
 
 export async function recommendationValidationHook(
   request: FastifyRequest<{ Body: RecommendationRequest }>,
-  reply: FastifyReply,
+  reply: FastifyReply
 ): Promise<void> {
   const error = validateRecommendationInput(request.body);
 

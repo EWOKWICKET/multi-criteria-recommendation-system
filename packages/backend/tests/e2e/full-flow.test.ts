@@ -132,7 +132,7 @@ describe('e2e: full AHP + recommendation flow', () => {
 
         // Original priority should match baseline
         const baselinePriority = baselineResult.globalPriorities.find(
-          (p) => p.name === SAMPLE_PROBLEM.alternativeNames[weakestIndex],
+          (p) => p.name === SAMPLE_PROBLEM.alternativeNames[weakestIndex]
         )!.priority;
 
         expect(result.originalGlobalPriority).toBeCloseTo(baselinePriority, 4);
@@ -172,8 +172,8 @@ describe('e2e: full AHP + recommendation flow', () => {
               url: `/api/recommendations/${algo.path}`,
               payload: { ...SAMPLE_PROBLEM, targetAlternativeIndex: weakestIndex },
             })
-            .then((res) => res.json()),
-        ),
+            .then((res) => res.json())
+        )
       );
 
       const original = results[0].originalGlobalPriority;

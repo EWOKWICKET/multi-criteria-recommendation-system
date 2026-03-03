@@ -16,7 +16,7 @@ export function buildApp(): FastifyInstance {
       api.register(ahpRoutes, { prefix: '/ahp' });
       api.register(recommendationsRoutes, { prefix: '/recommendations' });
     },
-    { prefix: '/api' },
+    { prefix: '/api' }
   );
 
   return app;
