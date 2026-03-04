@@ -1,7 +1,8 @@
 import type { Algorithm, AhpResponse } from './api/client';
 import { solveAhp, runRecommendation } from './api/client';
 import { createCriteriaForm } from './components/criteria-form';
-import { createMatrixInput, readMatrix } from './components/matrix-input';
+import { createCriteriaMatrixInput, readCriteriaMatrix } from './components/matrix-input';
+import { createRawValueInput, readAlternativeMatrices } from './components/raw-value-input';
 import { renderAhpResults, renderRecommendationResults } from './components/results-display';
 
 const ALGORITHMS: { value: Algorithm; label: string; description: string }[] = [
@@ -37,30 +38,64 @@ createCriteriaForm(app.querySelector('#criteria-form')!, {
 });
 
 function buildMatrices(container: HTMLElement, criteria: string[], alternatives: string[]): void {
-  container.innerHTML = '<h3>Pairwise Comparison Matrices</h3>';
+  container.innerHTML = '';
 
-  createMatrixInput({ container, size: criteria.length, label: 'Criteria', names: criteria });
+  // Criteria importance section
+  const criteriaHeader = document.createElement('h3');
+  criteriaHeader.textContent = 'Criteria Importance';
+  container.appendChild(criteriaHeader);
 
-  for (const name of criteria) {
-    createMatrixInput({ container, size: alternatives.length, label: name, names: alternatives });
-  }
+  const criteriaWrapper = document.createElement('div');
+  criteriaWrapper.id = 'criteria-matrix-wrapper';
+  createCriteriaMatrixInput({ container: criteriaWrapper, criteria });
+  container.appendChild(criteriaWrapper);
 
+  // Alternative values section
+  const altHeader = document.createElement('h3');
+  altHeader.textContent = 'Alternative Values per Criterion';
+  container.appendChild(altHeader);
+
+  const altDescription = document.createElement('p');
+  altDescription.className = 'section-description';
+  altDescription.textContent =
+    'Enter actual values for each alternative under each criterion. ' +
+    'The system converts these to comparison ratios automatically. ' +
+    'Select "Lower is better" for criteria like price where less is preferred.';
+  container.appendChild(altDescription);
+
+  const altWrapper = document.createElement('div');
+  altWrapper.id = 'alternatives-raw-values';
+  createRawValueInput({ container: altWrapper, criteria, alternatives });
+  container.appendChild(altWrapper);
+
+  // Solve button
   const solveBtn = document.createElement('button');
   solveBtn.textContent = 'Solve AHP';
   solveBtn.className = 'primary-btn';
-  solveBtn.addEventListener('click', () => handleSolve(container));
+  solveBtn.addEventListener('click', () => handleSolve());
   container.appendChild(solveBtn);
 }
 
-async function handleSolve(matricesContainer: HTMLElement): Promise<void> {
-  const tables = matricesContainer.querySelectorAll<HTMLTableElement>('table');
-  const criteriaMatrix = readMatrix(tables[0]);
+function readCurrentMatrices(): { criteriaMatrix: number[][]; alternativeMatrices: Record<string, number[][]> } | null {
+  const criteriaWrapper = app.querySelector<HTMLElement>('#criteria-matrix-wrapper');
 
-  const alternativeMatrices: Record<string, number[][]> = {};
+  if (!criteriaWrapper) return null;
 
-  for (let i = 0; i < currentCriteria.length; i++) {
-    alternativeMatrices[currentCriteria[i]] = readMatrix(tables[i + 1]);
-  }
+  const criteriaMatrix = readCriteriaMatrix(criteriaWrapper);
+
+  const altContainer = app.querySelector<HTMLElement>('#alternatives-raw-values');
+
+  if (!altContainer) return null;
+
+  const alternativeMatrices = readAlternativeMatrices(altContainer, currentCriteria);
+
+  return { criteriaMatrix, alternativeMatrices };
+}
+
+async function handleSolve(): Promise<void> {
+  const matrices = readCurrentMatrices();
+
+  if (!matrices) return;
 
   const resultsContainer = app.querySelector<HTMLElement>('#ahp-results')!;
   const recControls = app.querySelector<HTMLElement>('#recommendation-controls')!;
@@ -71,8 +106,8 @@ async function handleSolve(matricesContainer: HTMLElement): Promise<void> {
 
   try {
     const result = await solveAhp({
-      criteriaMatrix,
-      alternativeMatrices,
+      criteriaMatrix: matrices.criteriaMatrix,
+      alternativeMatrices: matrices.alternativeMatrices,
       criteriaNames: currentCriteria,
       alternativeNames: currentAlternatives,
     });
@@ -115,15 +150,9 @@ function showRecommendationControls(container: HTMLElement, ahpResult: AhpRespon
 }
 
 async function handleRecommendation(): Promise<void> {
-  const matricesContainer = app.querySelector<HTMLElement>('#matrices-container')!;
-  const tables = matricesContainer.querySelectorAll<HTMLTableElement>('table');
-  const criteriaMatrix = readMatrix(tables[0]);
+  const matrices = readCurrentMatrices();
 
-  const alternativeMatrices: Record<string, number[][]> = {};
-
-  for (let i = 0; i < currentCriteria.length; i++) {
-    alternativeMatrices[currentCriteria[i]] = readMatrix(tables[i + 1]);
-  }
+  if (!matrices) return;
 
   const algorithmSelect = app.querySelector<HTMLSelectElement>('#algorithm-select')!;
   const targetSelect = app.querySelector<HTMLSelectElement>('#target-select')!;
@@ -134,8 +163,8 @@ async function handleRecommendation(): Promise<void> {
 
   try {
     const result = await runRecommendation(algorithm, {
-      criteriaMatrix,
-      alternativeMatrices,
+      criteriaMatrix: matrices.criteriaMatrix,
+      alternativeMatrices: matrices.alternativeMatrices,
       criteriaNames: currentCriteria,
       alternativeNames: currentAlternatives,
       targetAlternativeIndex,
