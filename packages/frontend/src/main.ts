@@ -3,7 +3,8 @@ import { solveAhp, runRecommendation } from './api/client';
 import { createCriteriaForm } from './components/criteria-form';
 import { createCriteriaMatrixInput, readCriteriaMatrix } from './components/matrix-input';
 import { createRawValueInput, readAlternativeMatrices } from './components/raw-value-input';
-import { renderAhpResults, renderRecommendationResults } from './components/results-display';
+import { renderAhpResults, renderRecommendationResults, renderComparisonResults } from './components/results-display';
+import type { ComparisonEntry } from './components/results-display';
 
 const ALGORITHMS: { value: Algorithm; label: string; description: string }[] = [
   { value: 'global-leader', label: 'Global Leader', description: 'Match the overall winner' },
@@ -126,9 +127,9 @@ function showRecommendationControls(container: HTMLElement, ahpResult: AhpRespon
 
   const loserOptions = losers.map((l) => `<option value="${l.index}">${l.name}</option>`).join('');
 
-  const algorithmOptions = ALGORITHMS.map(
-    (a) => `<option value="${a.value}">${a.label} — ${a.description}</option>`
-  ).join('');
+  const algorithmOptions =
+    `<option value="all">Compare All — Run all algorithms and compare</option>` +
+    ALGORITHMS.map((a) => `<option value="${a.value}">${a.label} — ${a.description}</option>`).join('');
 
   container.innerHTML = `
     <h3>Generate Recommendations</h3>
@@ -156,21 +157,37 @@ async function handleRecommendation(): Promise<void> {
 
   const algorithmSelect = app.querySelector<HTMLSelectElement>('#algorithm-select')!;
   const targetSelect = app.querySelector<HTMLSelectElement>('#target-select')!;
-  const algorithm = algorithmSelect.value as Algorithm;
+  const algorithm = algorithmSelect.value;
   const targetAlternativeIndex = parseInt(targetSelect.value, 10);
 
   const recResults = app.querySelector<HTMLElement>('#recommendation-results')!;
 
-  try {
-    const result = await runRecommendation(algorithm, {
-      criteriaMatrix: matrices.criteriaMatrix,
-      alternativeMatrices: matrices.alternativeMatrices,
-      criteriaNames: currentCriteria,
-      alternativeNames: currentAlternatives,
-      targetAlternativeIndex,
-    });
+  const body = {
+    criteriaMatrix: matrices.criteriaMatrix,
+    alternativeMatrices: matrices.alternativeMatrices,
+    criteriaNames: currentCriteria,
+    alternativeNames: currentAlternatives,
+    targetAlternativeIndex,
+  };
 
-    renderRecommendationResults(recResults, result);
+  try {
+    if (algorithm === 'all') {
+      const entries = await Promise.all(
+        ALGORITHMS.map(async (a): Promise<ComparisonEntry> => {
+          const start = performance.now();
+          const result = await runRecommendation(a.value, body);
+          const timeMs = performance.now() - start;
+
+          return { label: a.label, result, timeMs };
+        }),
+      );
+
+      renderComparisonResults(recResults, entries);
+    } else {
+      const result = await runRecommendation(algorithm as Algorithm, body);
+
+      renderRecommendationResults(recResults, result);
+    }
   } catch (err) {
     recResults.innerHTML = `<p class="error">${(err as Error).message}</p>`;
   }

@@ -365,3 +365,20 @@ button:hover {
   background: #fde8e8;
   margin-top: 1rem;
 }
+
+/* Comparison table */
+
+.comparison-table .best-row {
+  background: #e6f7e6;
+  font-weight: 600;
+}
+
+.comparison-summary {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.comparison-summary p {
+  margin: 0.25rem 0;
+}
