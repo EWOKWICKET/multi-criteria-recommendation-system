@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { PositionStep, RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
-import { isCurrentWinner, improveUntilWinner } from './improve-until-winner.js';
+import { isCurrentWinner, improveUntilWinner } from './improve-until-winner.service.js';
 
 type LocalAverageParams = {
   criteriaMatrix: PairwiseMatrix;

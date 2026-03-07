@@ -1,1 +1,1 @@
-export { registerCors } from './cors.js';
+export { registerCors } from './cors.plugin.js';

@@ -137,21 +137,6 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
 }
 
 export function renderComparisonResults(container: HTMLElement, entries: ComparisonEntry[]): void {
-  // Find best: fewest steps among winners
-  const winners = entries.filter((e) => e.result.isWinner);
-  let bestIndex = -1;
-
-  if (winners.length > 0) {
-    let fewest = Infinity;
-
-    for (let i = 0; i < entries.length; i++) {
-      if (entries[i].result.isWinner && entries[i].result.totalSteps < fewest) {
-        fewest = entries[i].result.totalSteps;
-        bestIndex = i;
-      }
-    }
-  }
-
   let html = `
     <div class="results">
       <h3>Algorithm Comparison</h3>
@@ -160,7 +145,6 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
           <tr>
             <th>Algorithm</th>
             <th>Steps</th>
-            <th>Winner</th>
             <th>Gap</th>
             <th>Time (ms)</th>
           </tr>
@@ -168,19 +152,14 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
         <tbody>
   `;
 
-  for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
+  for (const e of entries) {
     const gap = e.result.newGlobalPriority - e.result.leaderGlobalPriorityAfter;
     const gapStr = (gap >= 0 ? '+' : '') + gap.toFixed(4);
     const gapClass = gap >= 0 ? 'consistent' : 'inconsistent';
-    const winnerStr = e.result.isWinner ? 'Yes' : 'No';
-    const winnerClass = e.result.isWinner ? 'consistent' : 'inconsistent';
-    const rowClass = i === bestIndex ? ' class="best-row"' : '';
 
-    html += `<tr${rowClass}>
+    html += `<tr>
       <td>${e.label}</td>
       <td>${e.result.totalSteps}</td>
-      <td class="${winnerClass}">${winnerStr}</td>
       <td class="${gapClass}">${gapStr}</td>
       <td>${e.timeMs.toFixed(1)}</td>
     </tr>`;
@@ -188,20 +167,15 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
 
   html += `</tbody></table>`;
 
-  // Summary
-  const winnersCount = winners.length;
   const totalAlgos = entries.length;
   const avgSteps = entries.reduce((sum, e) => sum + e.result.totalSteps, 0) / totalAlgos;
-  const fastest = entries.reduce((min, e) => (e.timeMs < min.timeMs ? e : min), entries[0]);
-  const fewestSteps = entries.reduce((min, e) => (e.result.totalSteps < min.result.totalSteps ? e : min), entries[0]);
+  const avgTime = entries.reduce((sum, e) => sum + e.timeMs, 0) / totalAlgos;
 
   html += `
     <div class="comparison-summary">
       <h4>Summary</h4>
-      <p>Succeeded: <strong>${winnersCount}</strong> / ${totalAlgos} algorithms</p>
       <p>Average steps: <strong>${avgSteps.toFixed(1)}</strong></p>
-      <p>Fewest steps: <strong>${fewestSteps.label}</strong> (${fewestSteps.result.totalSteps} steps)</p>
-      <p>Fastest: <strong>${fastest.label}</strong> (${fastest.timeMs.toFixed(1)} ms)</p>
+      <p>Average time: <strong>${avgTime.toFixed(1)} ms</strong></p>
     </div>
   `;
 
