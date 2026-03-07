@@ -23,8 +23,13 @@ export async function solveAhp(request: AhpSolveRequestType, reply: FastifyReply
   }
 
   logger.info(
-    { winner: result.winner, criteria: criteriaNames.length, alternatives: alternativeNames.length, consistent: result.isConsistent },
-    'AHP solved',
+    {
+      winner: result.winner,
+      criteria: criteriaNames.length,
+      alternatives: alternativeNames.length,
+      consistent: result.isConsistent,
+    },
+    'AHP solved'
   );
 
   return reply.send({ ...result, ...(warnings.length > 0 ? { warnings } : {}) });

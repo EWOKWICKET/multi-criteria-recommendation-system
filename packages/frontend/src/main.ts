@@ -179,7 +179,7 @@ async function handleRecommendation(): Promise<void> {
           const timeMs = performance.now() - start;
 
           return { label: a.label, result, timeMs };
-        }),
+        })
       );
 
       renderComparisonResults(recResults, entries);

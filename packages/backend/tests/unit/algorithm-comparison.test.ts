@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { globalLeader, localLeader, globalAverage, localAverage, adaptiveStrategy } from '../../src/services/recommendations';
+import {
+  globalLeader,
+  localLeader,
+  globalAverage,
+  localAverage,
+  adaptiveStrategy,
+} from '../../src/services/recommendations';
 
 /**
  * Test scenario: Local Leader processes criteria in order of `criteriaNames`.

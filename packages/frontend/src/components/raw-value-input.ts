@@ -75,10 +75,7 @@ export function createRawValueInput({ container, criteria, alternatives }: RawVa
   }
 }
 
-export function readAlternativeMatrices(
-  container: HTMLElement,
-  criteria: string[],
-): Record<string, number[][]> {
+export function readAlternativeMatrices(container: HTMLElement, criteria: string[]): Record<string, number[][]> {
   const result: Record<string, number[][]> = {};
 
   for (const criterion of criteria) {

@@ -21,7 +21,7 @@ function logRecommendation(algorithm: string, request: RecRequest, result: Recom
       steps: result.totalSteps,
       isWinner: result.isWinner,
     },
-    'Recommendation completed',
+    'Recommendation completed'
   );
 }
 
