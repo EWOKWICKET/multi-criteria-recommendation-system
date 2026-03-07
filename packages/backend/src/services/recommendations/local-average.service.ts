@@ -1,8 +1,8 @@
 import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
-import type { PositionStep, RecommendationResult } from '../../types/index.js';
+import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
-import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
-import { isCurrentWinner } from './improve-until-winner.service.js';
+import { isCurrentWinner } from './current-winner.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type LocalAverageParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -40,70 +40,42 @@ export function localAverage({
 
   const leaderGlobalPriority = globalValues[bestIndex];
 
-  const steps: PositionStep[] = [];
-  let stepNumber = 0;
+  // Snapshot average local priorities as baseline
+  const avgLP: Record<string, number> = {};
 
-  // Phase 1: Match the average local priority per criterion
-  for (const criterion of criteriaNames) {
-    const lp = localPriorities[criterion] ?? [];
-    const avg = lp.reduce((acc, val) => acc + val, 0) / lp.length;
+  for (const c of criteriaNames) {
+    const lp = localPriorities[c] ?? [];
+    avgLP[c] = lp.reduce((acc, val) => acc + val, 0) / lp.length;
+  }
 
-    while ((localPriorities[criterion] ?? [])[targetIndex] < avg) {
-      let bestCol = -1;
-      let lowestScaleIndex = SAATY_SCALE.length;
+  const ctx = {
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    steps: [] as RecommendationResult['steps'],
+  };
 
-      for (let j = 0; j < alternativeNames.length; j++) {
-        if (j === targetIndex) continue;
+  // Greedy: pick highest-ΔU step among criteria where target < average LP
+  for (;;) {
+    const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < avgLP[c];
+    const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);
 
-        const currentVal = currentMatrices[criterion][targetIndex][j];
-        const scaleIdx = findClosestSaatyIndex(currentVal);
+    if (!applied) break;
 
-        if (scaleIdx < SAATY_SCALE.length - 1 && scaleIdx < lowestScaleIndex) {
-          lowestScaleIndex = scaleIdx;
-          bestCol = j;
-        }
-      }
-
-      if (bestCol === -1) break;
-
-      const oldValue = currentMatrices[criterion][targetIndex][bestCol];
-
-      currentMatrices[criterion] = applySaatyStep({
-        matrix: currentMatrices[criterion],
-        row: targetIndex,
-        col: bestCol,
-        direction: StepDirection.Up,
-      });
-
-      const newValue = currentMatrices[criterion][targetIndex][bestCol];
-
-      localPriorities[criterion] = calculatePriorityVector(currentMatrices[criterion]);
-
-      const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-
-      stepNumber++;
-      steps.push({
-        stepNumber,
-        criterion,
-        comparedTo: alternativeNames[bestCol],
-        oldValue,
-        newValue,
-        localPriorityAfterStep: (localPriorities[criterion] ?? [])[targetIndex],
-        globalPriorityAfterStep: newGlobals[targetIndex],
-      });
-
-      if (isCurrentWinner(newGlobals, targetIndex)) {
-        return {
-          originalGlobalPriority,
-          newGlobalPriority: newGlobals[targetIndex],
-          leaderGlobalPriority,
-          leaderGlobalPriorityAfter: newGlobals[bestIndex],
-          isWinner: true,
-          totalSteps: steps.length,
-          steps,
-          modifiedMatrices: currentMatrices,
-        };
-      }
+    if (isCurrentWinner(newGlobals, targetIndex, bestIndex)) {
+      return {
+        originalGlobalPriority,
+        newGlobalPriority: newGlobals[targetIndex],
+        leaderGlobalPriority,
+        leaderGlobalPriorityAfter: newGlobals[bestIndex],
+        isWinner: true,
+        totalSteps: ctx.steps.length,
+        steps: ctx.steps,
+        modifiedMatrices: currentMatrices,
+      };
     }
   }
 
@@ -114,9 +86,9 @@ export function localAverage({
     newGlobalPriority: finalGlobals[targetIndex],
     leaderGlobalPriority,
     leaderGlobalPriorityAfter: finalGlobals[bestIndex],
-    isWinner: isCurrentWinner(finalGlobals, targetIndex),
-    totalSteps: steps.length,
-    steps,
+    isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
+    totalSteps: ctx.steps.length,
+    steps: ctx.steps,
     modifiedMatrices: currentMatrices,
   };
 }

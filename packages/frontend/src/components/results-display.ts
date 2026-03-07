@@ -145,27 +145,42 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
           <tr>
             <th>Algorithm</th>
             <th>Steps</th>
+            <th>Winner</th>
             <th>Gap</th>
-            <th>Efficiency</th>
             <th>Time (ms)</th>
           </tr>
         </thead>
         <tbody>
   `;
 
+  // Find best: among winners, fewest steps; tiebreak by smallest gap
+  const winnersWithSteps = entries.filter((e) => e.result.isWinner && e.result.totalSteps > 0);
+  let bestSteps = Infinity;
+  let bestGap = Infinity;
+
+  for (const e of winnersWithSteps) {
+    const gap = Math.abs(e.result.newGlobalPriority - e.result.leaderGlobalPriorityAfter);
+
+    if (e.result.totalSteps < bestSteps || (e.result.totalSteps === bestSteps && gap < bestGap)) {
+      bestSteps = e.result.totalSteps;
+      bestGap = gap;
+    }
+  }
+
   for (const e of entries) {
     const gap = e.result.newGlobalPriority - e.result.leaderGlobalPriorityAfter;
     const gapStr = (gap >= 0 ? '+' : '') + gap.toFixed(4);
     const gapClass = gap >= 0 ? 'consistent' : 'inconsistent';
-    const priorityGain = e.result.newGlobalPriority - e.result.originalGlobalPriority;
-    const efficiency = e.result.totalSteps > 0 ? (priorityGain / e.result.totalSteps) * 1000 : 0;
-    const effStr = e.result.totalSteps > 0 ? efficiency.toFixed(2) : '-';
+    const absGap = Math.abs(gap);
+    const isBest = e.result.isWinner && e.result.totalSteps === bestSteps && Math.abs(absGap - bestGap) < 1e-6;
+    const winnerStr = e.result.isWinner ? (isBest ? 'Best' : 'Yes') : 'No';
+    const winnerClass = isBest ? 'consistent' : e.result.isWinner ? '' : 'inconsistent';
 
     html += `<tr>
       <td>${e.label}</td>
       <td>${e.result.totalSteps}</td>
+      <td class="${winnerClass}">${winnerStr}</td>
       <td class="${gapClass}">${gapStr}</td>
-      <td>${effStr}</td>
       <td>${e.timeMs.toFixed(1)}</td>
     </tr>`;
   }

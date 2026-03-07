@@ -1,8 +1,8 @@
 import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
-import type { PositionStep, RecommendationResult } from '../../types/index.js';
+import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
-import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
-import { isCurrentWinner } from './improve-until-winner.service.js';
+import { isCurrentWinner } from './current-winner.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type GlobalLeaderParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -53,67 +53,41 @@ export function globalLeader({
     };
   }
 
-  const steps: PositionStep[] = [];
-  let stepNumber = 0;
+  // Snapshot leader's local priorities as baseline
+  const leaderLP: Record<string, number> = {};
 
-  // Phase 1: Match the global leader's local priorities per criterion
-  for (const criterion of criteriaNames) {
-    while ((localPriorities[criterion] ?? [])[targetIndex] < (localPriorities[criterion] ?? [])[bestIndex]) {
-      let bestCol = -1;
-      let lowestScaleIndex = SAATY_SCALE.length;
+  for (const c of criteriaNames) {
+    leaderLP[c] = (localPriorities[c] ?? [])[bestIndex];
+  }
 
-      for (let j = 0; j < alternativeNames.length; j++) {
-        if (j === targetIndex) continue;
+  const ctx = {
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    steps: [] as RecommendationResult['steps'],
+  };
 
-        const currentVal = currentMatrices[criterion][targetIndex][j];
-        const scaleIdx = findClosestSaatyIndex(currentVal);
+  // Greedy: pick highest-ΔU step among criteria where target < leader's LP
+  for (;;) {
+    const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < leaderLP[c];
+    const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);
 
-        if (scaleIdx < SAATY_SCALE.length - 1 && scaleIdx < lowestScaleIndex) {
-          lowestScaleIndex = scaleIdx;
-          bestCol = j;
-        }
-      }
+    if (!applied) break;
 
-      if (bestCol === -1) break;
-
-      const oldValue = currentMatrices[criterion][targetIndex][bestCol];
-
-      currentMatrices[criterion] = applySaatyStep({
-        matrix: currentMatrices[criterion],
-        row: targetIndex,
-        col: bestCol,
-        direction: StepDirection.Up,
-      });
-
-      const newValue = currentMatrices[criterion][targetIndex][bestCol];
-
-      localPriorities[criterion] = calculatePriorityVector(currentMatrices[criterion]);
-
-      const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-
-      stepNumber++;
-      steps.push({
-        stepNumber,
-        criterion,
-        comparedTo: alternativeNames[bestCol],
-        oldValue,
-        newValue,
-        localPriorityAfterStep: (localPriorities[criterion] ?? [])[targetIndex],
-        globalPriorityAfterStep: newGlobals[targetIndex],
-      });
-
-      if (isCurrentWinner(newGlobals, targetIndex)) {
-        return {
-          originalGlobalPriority,
-          newGlobalPriority: newGlobals[targetIndex],
-          leaderGlobalPriority,
-          leaderGlobalPriorityAfter: newGlobals[bestIndex],
-          isWinner: true,
-          totalSteps: steps.length,
-          steps,
-          modifiedMatrices: currentMatrices,
-        };
-      }
+    if (isCurrentWinner(newGlobals, targetIndex, bestIndex)) {
+      return {
+        originalGlobalPriority,
+        newGlobalPriority: newGlobals[targetIndex],
+        leaderGlobalPriority,
+        leaderGlobalPriorityAfter: newGlobals[bestIndex],
+        isWinner: true,
+        totalSteps: ctx.steps.length,
+        steps: ctx.steps,
+        modifiedMatrices: currentMatrices,
+      };
     }
   }
 
@@ -124,9 +98,9 @@ export function globalLeader({
     newGlobalPriority: finalGlobals[targetIndex],
     leaderGlobalPriority,
     leaderGlobalPriorityAfter: finalGlobals[bestIndex],
-    isWinner: isCurrentWinner(finalGlobals, targetIndex),
-    totalSteps: steps.length,
-    steps,
+    isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
+    totalSteps: ctx.steps.length,
+    steps: ctx.steps,
     modifiedMatrices: currentMatrices,
   };
 }

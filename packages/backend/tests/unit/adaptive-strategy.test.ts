@@ -170,26 +170,24 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       expect(weakCriteria).toContain(firstStep.criterion);
     });
 
-    it('stage 1 picks the weakest criterion first (largest deficit)', () => {
+    it('stage 1 picks the step with highest global priority gain (greedy)', () => {
       const targetIndex = 2;
+      const result = adaptiveStrategy(makeParams(targetIndex));
 
-      const deficits: { criterion: string; deficit: number }[] = [];
+      // Greedy approach: first step should be on an eligible criterion (target < avg)
+      // but chosen by highest ΔU, not by largest deficit
+      const eligibleCriteria: string[] = [];
+
       for (const criterion of CRITERIA_NAMES) {
         const lp = calculatePriorityVector(ALT_MATRICES[criterion as keyof typeof ALT_MATRICES]);
         const avg = lp.reduce((s, v) => s + v, 0) / lp.length;
-        const deficit = avg - lp[targetIndex];
 
-        if (deficit > 0) {
-          deficits.push({ criterion, deficit });
+        if (lp[targetIndex] < avg) {
+          eligibleCriteria.push(criterion);
         }
       }
 
-      deficits.sort((a, b) => b.deficit - a.deficit);
-      const worstCriterion = deficits[0].criterion;
-
-      const result = adaptiveStrategy(makeParams(targetIndex));
-
-      expect(result.steps[0].criterion).toBe(worstCriterion);
+      expect(eligibleCriteria).toContain(result.steps[0].criterion);
     });
   });
 
