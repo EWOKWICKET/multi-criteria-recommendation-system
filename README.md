@@ -105,7 +105,7 @@ packages/
 | `POST` | `/api/recommendations/local-leader`      | Match the best alternative per criterion                    |
 | `POST` | `/api/recommendations/global-average`    | Match the median-ranked alternative                         |
 | `POST` | `/api/recommendations/local-average`     | Match per-criterion average priorities                      |
-| `POST` | `/api/recommendations/adaptive-strategy` | Greedy min-cost optimization with early stopping            |
+| `POST` | `/api/recommendations/adaptive-strategy` | Two-stage: Local Average then Local Leader with early stop  |
 
 ### Baseline Request
 
@@ -175,27 +175,41 @@ The `warnings` field is only present when one or more consistency ratios exceed 
   "originalGlobalPriority": 0.19,
   "newGlobalPriority": 0.5,
   "leaderGlobalPriority": 0.49,
+  "leaderGlobalPriorityAfter": 0.45,
   "isWinner": true,
   "totalSteps": 4,
-  "steps": [
+  "actions": [
     {
-      "stepNumber": 1,
       "criterion": "Price",
       "comparedTo": "A1",
       "oldValue": 0.2,
-      "newValue": 0.25,
-      "localPriorityAfterStep": 0.15,
-      "globalPriorityAfterStep": 0.22
+      "newValue": 0.5,
+      "steps": 3,
+      "localPriorityAfterAction": 0.35,
+      "globalPriorityAfterAction": 0.48
+    },
+    {
+      "criterion": "Quality",
+      "comparedTo": "A2",
+      "oldValue": 0.5,
+      "newValue": 1.0,
+      "steps": 1,
+      "localPriorityAfterAction": 0.40,
+      "globalPriorityAfterAction": 0.50
     }
   ],
   "modifiedMatrices": { "Price": [[1, "..."]], "...": "..." }
 }
 ```
 
+Actions are merged from individual steps: multiple steps on the same criterion + compared-to pair are combined into a single action showing the first `oldValue`, final `newValue`, and the number of steps taken.
+
 ## Algorithms
 
-1. **Global Leader** — Improves target's pairwise comparisons to match the overall winner's local priorities in each criterion.
-2. **Local Leader** — Improves target to match the best alternative per criterion (different leaders per criterion).
-3. **Global Average** — Improves target to match the median-ranked alternative's local priorities.
-4. **Local Average** — Improves target to reach the average local priority per criterion.
-5. **Adaptive Strategy** — Two-stage greedy optimization: Stage 1 brings weak criteria to a sanitary minimum, Stage 2 picks the most cost-effective step at each iteration. Stops early when the target becomes the winner.
+All algorithms use greedy step selection: at each iteration, every eligible +1 Saaty step is simulated, and the one with the highest global priority gain (ΔU) is applied. Early stopping triggers when the target beats the original leader.
+
+1. **Global Leader** — Eligible criteria: target LP < global winner's LP (snapshotted at start).
+2. **Local Leader** — Eligible criteria: target LP < max LP per criterion (snapshotted at start).
+3. **Global Average** — Eligible criteria: target LP < median-ranked alternative's LP (snapshotted at start).
+4. **Local Average** — Eligible criteria: target LP < average LP per criterion (snapshotted at start).
+5. **Adaptive Strategy** — Two-stage greedy optimization: Stage 1 (Local Average) fully completes, bringing target to average LP on all criteria. Stage 2 (Local Leader) matches max LP per criterion with early stopping when the target becomes the winner.
