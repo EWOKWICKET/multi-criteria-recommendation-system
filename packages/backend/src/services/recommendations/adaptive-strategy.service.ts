@@ -150,7 +150,8 @@ function runLocalLeaderStage(ctx: StageContext, stepNumber: number): boolean {
  * Apply one position step on the given criterion, choosing the opponent with the lowest scale index.
  */
 function applyOneStep(criterion: string, ctx: StageContext, stepNumber: number): boolean {
-  const { alternativeNames, localPriorities, currentMatrices, criteriaWeights, criteriaNames, targetIndex, steps } = ctx;
+  const { alternativeNames, localPriorities, currentMatrices, criteriaWeights, criteriaNames, targetIndex, steps } =
+    ctx;
 
   let bestCol = -1;
   let lowestScaleIndex = SAATY_SCALE.length;

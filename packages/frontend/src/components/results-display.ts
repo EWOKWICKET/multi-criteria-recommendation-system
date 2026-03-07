@@ -146,6 +146,7 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
             <th>Algorithm</th>
             <th>Steps</th>
             <th>Gap</th>
+            <th>Efficiency</th>
             <th>Time (ms)</th>
           </tr>
         </thead>
@@ -156,11 +157,15 @@ export function renderComparisonResults(container: HTMLElement, entries: Compari
     const gap = e.result.newGlobalPriority - e.result.leaderGlobalPriorityAfter;
     const gapStr = (gap >= 0 ? '+' : '') + gap.toFixed(4);
     const gapClass = gap >= 0 ? 'consistent' : 'inconsistent';
+    const priorityGain = e.result.newGlobalPriority - e.result.originalGlobalPriority;
+    const efficiency = e.result.totalSteps > 0 ? (priorityGain / e.result.totalSteps) * 1000 : 0;
+    const effStr = e.result.totalSteps > 0 ? efficiency.toFixed(2) : '-';
 
     html += `<tr>
       <td>${e.label}</td>
       <td>${e.result.totalSteps}</td>
       <td class="${gapClass}">${gapStr}</td>
+      <td>${effStr}</td>
       <td>${e.timeMs.toFixed(1)}</td>
     </tr>`;
   }
