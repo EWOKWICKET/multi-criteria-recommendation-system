@@ -47,10 +47,10 @@ type ExperimentResult = {
 };
 
 // Seeded pseudo-random number generator for reproducibility
-function mulberry32(seed: number) {
+function mulberry32(seed: number): () => number {
   let s = seed | 0;
 
-  return () => {
+  return (): number => {
     s = (s + 0x6d2b79f5) | 0;
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
@@ -71,8 +71,10 @@ function generateCriteriaMatrix(n: number, rng: () => number): number[][] {
       const r = rng();
       let idx: number;
 
-      if (r < 0.4) idx = Math.floor(rng() * 3) + 6; // 7,8,9 — strong dominance
-      else if (r < 0.7) idx = Math.floor(rng() * 3) + 3; // 4,5,6 — moderate
+      if (r < 0.4)
+        idx = Math.floor(rng() * 3) + 6; // 7,8,9 — strong dominance
+      else if (r < 0.7)
+        idx = Math.floor(rng() * 3) + 3; // 4,5,6 — moderate
       else idx = Math.floor(rng() * 3); // 1,2,3 — weak
 
       const val = saatyValues[idx];
@@ -84,13 +86,15 @@ function generateCriteriaMatrix(n: number, rng: () => number): number[][] {
   return matrix;
 }
 
+type DominanceMatrixParams = {
+  m: number;
+  dominantIdx: number;
+  weakIdx: number;
+  rng: () => number;
+};
+
 // Generate alternative matrices with strong dominance (one alternative dominates others)
-function generateAlternativeMatrixWithDominance(
-  m: number,
-  dominantIdx: number,
-  weakIdx: number,
-  rng: () => number,
-): number[][] {
+function generateAlternativeMatrixWithDominance({ m, dominantIdx, weakIdx, rng }: DominanceMatrixParams): number[][] {
   const matrix: number[][] = Array.from({ length: m }, () => Array(m).fill(1));
   const saatyValues = [1 / 9, 1 / 8, 1 / 7, 1 / 6, 1 / 5, 1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -125,7 +129,14 @@ function generateAlternativeMatrixWithDominance(
   return matrix;
 }
 
-function generateHardExperiment(id: number, nCriteria: number, nAlternatives: number, seed: number): ExperimentConfig {
+type ExperimentParams = {
+  id: number;
+  nCriteria: number;
+  nAlternatives: number;
+  seed: number;
+};
+
+function generateHardExperiment({ id, nCriteria, nAlternatives, seed }: ExperimentParams): ExperimentConfig {
   const rng = mulberry32(seed);
   const criteriaNames = Array.from({ length: nCriteria }, (_, i) => `C${i + 1}`);
   const alternativeNames = Array.from({ length: nAlternatives }, (_, i) => `A${i + 1}`);
@@ -143,15 +154,20 @@ function generateHardExperiment(id: number, nCriteria: number, nAlternatives: nu
   for (let c = 0; c < nCriteria; c++) {
     // Most criteria: dominant wins, weak loses. Some criteria: randomize for variety
     if (rng() < 0.8) {
-      alternativeMatrices[criteriaNames[c]] = generateAlternativeMatrixWithDominance(nAlternatives, dominantIdx, weakIdx, rng);
-    } else {
-      // Occasional random criterion to add noise
-      alternativeMatrices[criteriaNames[c]] = generateAlternativeMatrixWithDominance(
-        nAlternatives,
-        Math.floor(rng() * nAlternatives),
+      alternativeMatrices[criteriaNames[c]] = generateAlternativeMatrixWithDominance({
+        m: nAlternatives,
+        dominantIdx,
         weakIdx,
         rng,
-      );
+      });
+    } else {
+      // Occasional random criterion to add noise
+      alternativeMatrices[criteriaNames[c]] = generateAlternativeMatrixWithDominance({
+        m: nAlternatives,
+        dominantIdx: Math.floor(rng() * nAlternatives),
+        weakIdx,
+        rng,
+      });
     }
   }
 
@@ -188,7 +204,7 @@ async function runExperiment(config: ExperimentConfig): Promise<ExperimentResult
       alternativeMatrices: config.alternativeMatrices,
       criteriaNames: config.criteriaNames,
       alternativeNames: config.alternativeNames,
-    },
+    }
   );
 
   // Pick the worst alternative as target (hardest case — biggest gap to leader)
@@ -263,11 +279,14 @@ async function runExperiment(config: ExperimentConfig): Promise<ExperimentResult
 }
 
 function formatResults(experiments: ExperimentResult[]): string {
-  let md = '# Experiment Results: Algorithm Comparison (100 Hard Experiments)\n\n';
+  const randomCount = experiments.filter((e) => !e.config.name.startsWith('Edge')).length;
+  const edgeCount = experiments.filter((e) => e.config.name.startsWith('Edge')).length;
+  let md = `# Experiment Results: Algorithm Comparison (${randomCount} Random + ${edgeCount} Edge Cases)\n\n`;
   md += `**Date:** ${new Date().toISOString().split('T')[0]}\n`;
   md += `**Total experiments:** ${experiments.length}\n`;
   md += `**Algorithms:** ${ALGORITHMS.map((a) => ALGO_LABELS[a]).join(', ')}\n`;
-  md += `**Strategy:** Always target the worst alternative (maximum gap to leader)\n\n`;
+  md += `**Strategy:** Always target the worst alternative (maximum gap to leader)\n`;
+  md += `**Edge cases:** Low-weight criteria listed first with large local gaps to penalize sequential processing\n\n`;
   md += '---\n\n';
 
   // Per-experiment tables
@@ -283,7 +302,7 @@ function formatResults(experiments: ExperimentResult[]): string {
     md += '|-----------|------:|:------:|------:|----------:|\n';
 
     for (const r of exp.results) {
-      const gap = r.totalSteps >= 0 ? ((r.gap >= 0 ? '+' : '') + r.gap.toFixed(4)) : 'ERR';
+      const gap = r.totalSteps >= 0 ? (r.gap >= 0 ? '+' : '') + r.gap.toFixed(4) : 'ERR';
       const winner = r.totalSteps >= 0 ? (r.isWinner ? 'Yes' : 'No') : 'ERR';
       const steps = r.totalSteps >= 0 ? String(r.totalSteps) : 'ERR';
       md += `| ${r.label} | ${steps} | ${winner} | ${gap} | ${r.timeMs.toFixed(1)} |\n`;
@@ -297,8 +316,10 @@ function formatResults(experiments: ExperimentResult[]): string {
 
   // Per-algorithm aggregates
   md += '### Overall Statistics\n\n';
-  md += '| Algorithm | Avg Steps | Median Steps | Win Rate | Avg Gap | Avg Time (ms) | Min Steps | Max Steps | Max Time (ms) |\n';
-  md += '|-----------|----------:|-------------:|---------:|--------:|--------------:|----------:|----------:|--------------:|\n';
+  md +=
+    '| Algorithm | Avg Steps | Median Steps | Win Rate | Avg Gap | Avg Time (ms) | Min Steps | Max Steps | Max Time (ms) |\n';
+  md +=
+    '|-----------|----------:|-------------:|---------:|--------:|--------------:|----------:|----------:|--------------:|\n';
 
   for (const algo of ALGORITHMS) {
     const runs = experiments.map((e) => e.results.find((r) => r.algorithm === algo)!).filter((r) => r.totalSteps >= 0);
@@ -317,6 +338,65 @@ function formatResults(experiments: ExperimentResult[]): string {
   }
 
   md += '\n';
+
+  // Breakdown: Random vs Edge Cases
+  md += '### Random vs Edge Case Experiments\n\n';
+  md += '| Category | Experiments | ';
+
+  for (const algo of ALGORITHMS) md += `${ALGO_LABELS[algo]} (avg steps) | `;
+  md += '\n|----------|------------:|';
+
+  for (let i = 0; i < ALGORITHMS.length; i++) md += '---:|';
+  md += '\n';
+
+  for (const [label, filterFn] of [
+    ['Random', (e: ExperimentResult): boolean => !e.config.name.startsWith('Edge')] as const,
+    ['Edge Cases', (e: ExperimentResult): boolean => e.config.name.startsWith('Edge')] as const,
+  ]) {
+    const subset = experiments.filter(filterFn);
+
+    if (subset.length === 0) continue;
+    md += `| ${label} | ${subset.length} | `;
+
+    for (const algo of ALGORITHMS) {
+      const runs = subset.flatMap((e) => e.results.filter((r) => r.algorithm === algo && r.totalSteps >= 0));
+      const avgSteps = runs.reduce((s, r) => s + r.totalSteps, 0) / runs.length;
+      md += `${avgSteps.toFixed(1)} | `;
+    }
+
+    md += '\n';
+  }
+
+  md += '\n';
+
+  // Edge case leaderboard
+  const edgeExperiments = experiments.filter((e) => e.config.name.startsWith('Edge'));
+
+  if (edgeExperiments.length > 0) {
+    md += '### Edge Case Leaderboard (fewest steps among winners)\n\n';
+    const edgeBestCounts: Record<string, number> = {};
+
+    for (const algo of ALGORITHMS) edgeBestCounts[algo] = 0;
+
+    for (const exp of edgeExperiments) {
+      const winners = exp.results.filter((r) => r.isWinner && r.totalSteps >= 0);
+
+      if (winners.length === 0) continue;
+
+      const minSteps = Math.min(...winners.map((r) => r.totalSteps));
+      const bests = winners.filter((r) => r.totalSteps === minSteps);
+
+      for (const b of bests) edgeBestCounts[b.algorithm]++;
+    }
+
+    const edgeLeaderboard = Object.entries(edgeBestCounts).sort((a, b) => b[1] - a[1]);
+    md += '| Rank | Algorithm | Wins (fewest steps) |\n';
+    md += '|-----:|-----------|--------------------:|\n';
+    edgeLeaderboard.forEach(([algo, wins], i) => {
+      md += `| ${i + 1} | ${ALGO_LABELS[algo]} | ${wins} / ${edgeExperiments.length} |\n`;
+    });
+    md += '\n';
+  }
 
   // Breakdown by problem size
   md += '### Performance by Problem Size\n\n';
@@ -367,9 +447,9 @@ function formatResults(experiments: ExperimentResult[]): string {
 
   const gapBuckets: [string, number, number, ExperimentResult[]][] = [
     ['Small (< 0.15)', 0, 0.15, []],
-    ['Medium (0.15 - 0.30)', 0.15, 0.30, []],
-    ['Large (0.30 - 0.50)', 0.30, 0.50, []],
-    ['Extreme (> 0.50)', 0.50, 1.0, []],
+    ['Medium (0.15 - 0.30)', 0.15, 0.3, []],
+    ['Large (0.30 - 0.50)', 0.3, 0.5, []],
+    ['Extreme (> 0.50)', 0.5, 1.0, []],
   ];
 
   for (const exp of experiments) {
@@ -494,29 +574,164 @@ function formatResults(experiments: ExperimentResult[]): string {
   return md;
 }
 
-// Generate 100 hard experiment configs with large sizes and varied seeds
-function generateExperimentConfigs(): [number, number, number][] {
-  const configs: [number, number, number][] = [];
+/**
+ * Edge-case experiment: criteria are ordered so that LOW-weight criteria come first
+ * with large local gaps (target far from local max). HIGH-weight criteria come last
+ * with small gaps. This forces Local Leader to grind through unimportant criteria
+ * while greedy algorithms skip straight to the high-weight ones.
+ */
+function generateEdgeCaseExperiment({ id, nCriteria, nAlternatives, seed }: ExperimentParams): ExperimentConfig {
+  const rng = mulberry32(seed);
+  const criteriaNames = Array.from({ length: nCriteria }, (_, i) => `C${i + 1}`);
+  const alternativeNames = Array.from({ length: nAlternatives }, (_, i) => `A${i + 1}`);
+
+  // Create criteria matrix with extreme weight distribution:
+  // First criteria get very low weights, last criteria get very high weights.
+  // This is achieved by making later criteria dominate earlier ones in pairwise comparisons.
+  const criteriaMatrix: number[][] = Array.from({ length: nCriteria }, () => Array(nCriteria).fill(1));
+
+  for (let i = 0; i < nCriteria; i++) {
+    for (let j = i + 1; j < nCriteria; j++) {
+      // Later criteria (higher index) are more important
+      // The further apart, the stronger the dominance
+      const diff = j - i;
+      const val = Math.min(9, 1 + diff * 2 + Math.floor(rng() * 2));
+      // j dominates i → a[i][j] = 1/val, a[j][i] = val
+      criteriaMatrix[i][j] = 1 / val;
+      criteriaMatrix[j][i] = val;
+    }
+  }
+
+  // Pick dominant and weak alternatives
+  const dominantIdx = 0;
+  const weakIdx = nAlternatives - 1; // target = worst alternative
+
+  const alternativeMatrices: Record<string, number[][]> = {};
+
+  for (let c = 0; c < nCriteria; c++) {
+    const isLowWeight = c < Math.floor(nCriteria / 2);
+
+    if (isLowWeight) {
+      // Low-weight criteria: dominant STRONGLY dominates, target is at minimum
+      // This creates a huge local gap that Local Leader will waste steps on
+      alternativeMatrices[criteriaNames[c]] = generateAlternativeMatrixWithDominance({
+        m: nAlternatives,
+        dominantIdx,
+        weakIdx,
+        rng,
+      });
+    } else {
+      // High-weight criteria: target is only slightly behind
+      // A few greedy steps here would give massive global priority gains
+      const matrix: number[][] = Array.from({ length: nAlternatives }, () => Array(nAlternatives).fill(1));
+
+      for (let i = 0; i < nAlternatives; i++) {
+        for (let j = i + 1; j < nAlternatives; j++) {
+          let val: number;
+
+          if (i === dominantIdx) {
+            // Dominant is only slightly better (Saaty 2 or 3)
+            val = 2 + Math.floor(rng() * 2);
+          } else if (j === weakIdx) {
+            // Others slightly better than target
+            val = 1 + Math.floor(rng() * 2);
+          } else {
+            val = 1 + Math.floor(rng() * 2);
+          }
+
+          matrix[i][j] = val;
+          matrix[j][i] = 1 / val;
+        }
+      }
+
+      alternativeMatrices[criteriaNames[c]] = matrix;
+    }
+  }
+
+  return {
+    id,
+    name: `Edge ${id}: ${nCriteria}C x ${nAlternatives}A`,
+    criteriaNames,
+    alternativeNames,
+    criteriaMatrix,
+    alternativeMatrices,
+  };
+}
+
+// Generate 100 random hard experiments + 20 edge cases
+function generateExperimentConfigs(): { type: 'random' | 'edge'; nC: number; nA: number; seed: number }[] {
+  const configs: { type: 'random' | 'edge'; nC: number; nA: number; seed: number }[] = [];
   // Mix of sizes, all on the larger/harder side
   const sizes: [number, number][] = [
     // [criteria, alternatives]
-    [5, 6], [5, 7], [5, 8], [5, 9], [5, 10],
-    [6, 6], [6, 7], [6, 8], [6, 9], [6, 10],
-    [7, 6], [7, 7], [7, 8], [7, 9], [7, 10],
-    [8, 6], [8, 7], [8, 8], [8, 9], [8, 10],
-    [9, 7], [9, 8], [9, 9], [9, 10],
-    [10, 7], [10, 8], [10, 9], [10, 10],
+    [5, 6],
+    [5, 7],
+    [5, 8],
+    [5, 9],
+    [5, 10],
+    [6, 6],
+    [6, 7],
+    [6, 8],
+    [6, 9],
+    [6, 10],
+    [7, 6],
+    [7, 7],
+    [7, 8],
+    [7, 9],
+    [7, 10],
+    [8, 6],
+    [8, 7],
+    [8, 8],
+    [8, 9],
+    [8, 10],
+    [9, 7],
+    [9, 8],
+    [9, 9],
+    [9, 10],
+    [10, 7],
+    [10, 8],
+    [10, 9],
+    [10, 10],
   ];
 
   let id = 0;
 
-  // Cycle through sizes with different seeds
+  // 100 random hard experiments
   while (configs.length < 100) {
     for (const [c, a] of sizes) {
       if (configs.length >= 100) break;
       id++;
-      configs.push([c, a, id * 37 + 13]);
+      configs.push({ type: 'random', nC: c, nA: a, seed: id * 37 + 13 });
     }
+  }
+
+  // 20 edge-case experiments: low-weight criteria first with large gaps
+  const edgeSizes: [number, number][] = [
+    [4, 4],
+    [4, 5],
+    [4, 6],
+    [4, 8],
+    [6, 4],
+    [6, 5],
+    [6, 6],
+    [6, 8],
+    [8, 4],
+    [8, 5],
+    [8, 6],
+    [8, 8],
+    [10, 4],
+    [10, 5],
+    [10, 6],
+    [10, 8],
+    [5, 10],
+    [7, 10],
+    [9, 10],
+    [10, 10],
+  ];
+
+  for (const [c, a] of edgeSizes) {
+    id++;
+    configs.push({ type: 'edge', nC: c, nA: a, seed: id * 53 + 7 });
   }
 
   return configs;
@@ -524,15 +739,16 @@ function generateExperimentConfigs(): [number, number, number][] {
 
 const EXPERIMENT_CONFIGS = generateExperimentConfigs();
 
-async function main() {
+async function main(): Promise<void> {
   const total = EXPERIMENT_CONFIGS.length;
-  console.log(`Starting ${total} hard experiments...\n`);
+  console.log(`Starting ${total} experiments (100 random + 20 edge cases)...\n`);
 
   const results: ExperimentResult[] = [];
 
   for (let i = 0; i < total; i++) {
-    const [nC, nA, seed] = EXPERIMENT_CONFIGS[i];
-    const config = generateHardExperiment(i + 1, nC, nA, seed);
+    const { type, nC, nA, seed } = EXPERIMENT_CONFIGS[i];
+    const params = { id: i + 1, nCriteria: nC, nAlternatives: nA, seed };
+    const config = type === 'edge' ? generateEdgeCaseExperiment(params) : generateHardExperiment(params);
 
     process.stdout.write(`[${String(i + 1).padStart(3)}/${total}] ${config.name.padEnd(22)}`);
 
@@ -543,7 +759,7 @@ async function main() {
     const bestSteps = Math.min(...result.results.filter((r) => r.isWinner).map((r) => r.totalSteps), Infinity);
     const maxTime = Math.max(...result.results.map((r) => r.timeMs));
     console.log(
-      `gap=${result.priorityGapBeforeImprovement.toFixed(3)} | win=${winners}/5 | best=${bestSteps === Infinity ? 'N/A' : String(bestSteps).padStart(4)} | maxT=${maxTime.toFixed(1)}ms`,
+      `gap=${result.priorityGapBeforeImprovement.toFixed(3)} | win=${winners}/5 | best=${bestSteps === Infinity ? 'N/A' : String(bestSteps).padStart(4)} | maxT=${maxTime.toFixed(1)}ms`
     );
   }
 

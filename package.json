@@ -16,7 +16,8 @@
     "lint": "eslint packages/",
     "lint:fix": "eslint packages/ --fix",
     "format": "prettier --write \"packages/**/*.{ts,json,css,html}\"",
-    "format:check": "prettier --check \"packages/**/*.{ts,json,css,html}\""
+    "format:check": "prettier --check \"packages/**/*.{ts,json,css,html}\"",
+    "experiments": "npx tsx scripts/run-experiments.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
