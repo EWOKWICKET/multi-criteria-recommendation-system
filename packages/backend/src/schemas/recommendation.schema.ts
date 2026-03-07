@@ -12,14 +12,14 @@ export const RecommendationRequestSchema = Type.Object({
 
 export type RecommendationRequest = Static<typeof RecommendationRequestSchema>;
 
-const PositionStepSchema = Type.Object({
-  stepNumber: Type.Integer(),
+const ActionSchema = Type.Object({
   criterion: Type.String(),
   comparedTo: Type.String(),
   oldValue: Type.Number(),
   newValue: Type.Number(),
-  localPriorityAfterStep: Type.Number(),
-  globalPriorityAfterStep: Type.Number(),
+  steps: Type.Integer(),
+  localPriorityAfterAction: Type.Number(),
+  globalPriorityAfterAction: Type.Number(),
 });
 
 export const RecommendationResponseSchema = Type.Object({
@@ -29,7 +29,7 @@ export const RecommendationResponseSchema = Type.Object({
   leaderGlobalPriorityAfter: Type.Number(),
   isWinner: Type.Boolean(),
   totalSteps: Type.Integer(),
-  steps: Type.Array(PositionStepSchema),
+  actions: Type.Array(ActionSchema),
   modifiedMatrices: Type.Record(Type.String(), PairwiseMatrix),
 });
 

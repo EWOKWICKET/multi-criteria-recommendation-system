@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { RecommendationRequest } from '../schemas/index.js';
-import type { RecommendationResult } from '../types/index.js';
+import type { RecommendationResult, Action, PositionStep } from '../types/index.js';
 import {
   globalLeader as globalLeaderService,
   localLeader as localLeaderService,
@@ -11,6 +11,39 @@ import {
 import { logger } from '../services/logger.service.js';
 
 type RecRequest = FastifyRequest<{ Body: RecommendationRequest }>;
+
+function mergeStepsIntoActions(steps: PositionStep[]): Action[] {
+  const actions: Action[] = [];
+
+  for (const step of steps) {
+    const existing = actions.find((a) => a.criterion === step.criterion && a.comparedTo === step.comparedTo);
+
+    if (existing) {
+      existing.newValue = step.newValue;
+      existing.steps++;
+      existing.localPriorityAfterAction = step.localPriorityAfterStep;
+      existing.globalPriorityAfterAction = step.globalPriorityAfterStep;
+    } else {
+      actions.push({
+        criterion: step.criterion,
+        comparedTo: step.comparedTo,
+        oldValue: step.oldValue,
+        newValue: step.newValue,
+        steps: 1,
+        localPriorityAfterAction: step.localPriorityAfterStep,
+        globalPriorityAfterAction: step.globalPriorityAfterStep,
+      });
+    }
+  }
+
+  return actions;
+}
+
+function toResponse(result: RecommendationResult): Omit<RecommendationResult, 'steps'> & { actions: Action[] } {
+  const { steps, modifiedMatrices, ...rest } = result;
+
+  return { ...rest, actions: mergeStepsIntoActions(steps), modifiedMatrices };
+}
 
 function logRecommendation(algorithm: string, request: RecRequest, result: RecommendationResult): void {
   const { alternativeNames, targetAlternativeIndex } = request.body;
@@ -31,7 +64,7 @@ export async function globalLeader(request: RecRequest, reply: FastifyReply): Pr
 
   logRecommendation('global-leader', request, result);
 
-  return reply.send(result);
+  return reply.send(toResponse(result));
 }
 
 export async function localLeader(request: RecRequest, reply: FastifyReply): Promise<void> {
@@ -40,7 +73,7 @@ export async function localLeader(request: RecRequest, reply: FastifyReply): Pro
 
   logRecommendation('local-leader', request, result);
 
-  return reply.send(result);
+  return reply.send(toResponse(result));
 }
 
 export async function globalAverage(request: RecRequest, reply: FastifyReply): Promise<void> {
@@ -49,7 +82,7 @@ export async function globalAverage(request: RecRequest, reply: FastifyReply): P
 
   logRecommendation('global-average', request, result);
 
-  return reply.send(result);
+  return reply.send(toResponse(result));
 }
 
 export async function localAverage(request: RecRequest, reply: FastifyReply): Promise<void> {
@@ -58,7 +91,7 @@ export async function localAverage(request: RecRequest, reply: FastifyReply): Pr
 
   logRecommendation('local-average', request, result);
 
-  return reply.send(result);
+  return reply.send(toResponse(result));
 }
 
 export async function adaptiveStrategy(request: RecRequest, reply: FastifyReply): Promise<void> {
@@ -67,5 +100,5 @@ export async function adaptiveStrategy(request: RecRequest, reply: FastifyReply)
 
   logRecommendation('adaptive-strategy', request, result);
 
-  return reply.send(result);
+  return reply.send(toResponse(result));
 }

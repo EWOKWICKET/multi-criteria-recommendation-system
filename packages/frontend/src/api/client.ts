@@ -20,14 +20,14 @@ type RecommendationRequest = AhpRequest & {
   targetAlternativeIndex: number;
 };
 
-type PositionStep = {
-  stepNumber: number;
+type Action = {
   criterion: string;
   comparedTo: string;
   oldValue: number;
   newValue: number;
-  localPriorityAfterStep: number;
-  globalPriorityAfterStep: number;
+  steps: number;
+  localPriorityAfterAction: number;
+  globalPriorityAfterAction: number;
 };
 
 type RecommendationResponse = {
@@ -37,7 +37,7 @@ type RecommendationResponse = {
   leaderGlobalPriorityAfter: number;
   isWinner: boolean;
   totalSteps: number;
-  steps: PositionStep[];
+  actions: Action[];
   modifiedMatrices: Record<string, number[][]>;
 };
 
@@ -66,4 +66,4 @@ export function runRecommendation(algorithm: Algorithm, body: RecommendationRequ
   return post(`${BASE}/recommendations/${algorithm}`, body);
 }
 
-export type { AhpRequest, AhpResponse, RecommendationRequest, RecommendationResponse, PositionStep };
+export type { AhpRequest, AhpResponse, RecommendationRequest, RecommendationResponse, Action };

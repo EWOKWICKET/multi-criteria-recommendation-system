@@ -98,9 +98,9 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
       </div>
   `;
 
-  if (result.steps.length > 0) {
+  if (result.actions.length > 0) {
     html += `
-      <h4>Steps</h4>
+      <h4>Actions (${result.actions.length} merged from ${result.totalSteps} steps)</h4>
       <table class="results-table">
         <thead>
           <tr>
@@ -109,6 +109,7 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
             <th>Compared To</th>
             <th>Old Value</th>
             <th>New Value</th>
+            <th>Steps</th>
             <th>Local Priority</th>
             <th>Global Priority</th>
           </tr>
@@ -116,17 +117,18 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
         <tbody>
     `;
 
-    for (const step of result.steps) {
+    result.actions.forEach((a, i) => {
       html += `<tr>
-        <td>${step.stepNumber}</td>
-        <td>${step.criterion}</td>
-        <td>${step.comparedTo}</td>
-        <td>${step.oldValue.toFixed(4)}</td>
-        <td>${step.newValue.toFixed(4)}</td>
-        <td>${step.localPriorityAfterStep.toFixed(4)}</td>
-        <td>${step.globalPriorityAfterStep.toFixed(4)}</td>
+        <td>${i + 1}</td>
+        <td>${a.criterion}</td>
+        <td>${a.comparedTo}</td>
+        <td>${a.oldValue.toFixed(4)}</td>
+        <td>${a.newValue.toFixed(4)}</td>
+        <td>${a.steps}</td>
+        <td>${a.localPriorityAfterAction.toFixed(4)}</td>
+        <td>${a.globalPriorityAfterAction.toFixed(4)}</td>
       </tr>`;
-    }
+    });
 
     html += `</tbody></table>`;
   }

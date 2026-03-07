@@ -11,6 +11,17 @@ export type PositionStep = {
   globalPriorityAfterStep: number;
 };
 
+/** Merged steps for the same criterion + comparedTo pair */
+export type Action = {
+  criterion: string;
+  comparedTo: string;
+  oldValue: number;
+  newValue: number;
+  steps: number;
+  localPriorityAfterAction: number;
+  globalPriorityAfterAction: number;
+};
+
 /** Result returned by any recommendation algorithm */
 export type RecommendationResult = {
   originalGlobalPriority: number;

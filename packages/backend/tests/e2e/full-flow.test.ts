@@ -140,13 +140,9 @@ describe('e2e: full AHP + recommendation flow', () => {
         // Should improve or maintain priority
         expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);
 
-        // Steps should be coherent
-        expect(result.totalSteps).toBe(result.steps.length);
-
-        // Each step should have increasing step numbers
-        for (let i = 0; i < result.steps.length; i++) {
-          expect(result.steps[i].stepNumber).toBe(i + 1);
-        }
+        // Actions should be merged from steps
+        expect(result.actions.length).toBeLessThanOrEqual(result.totalSteps);
+        expect(result.actions.length).toBeGreaterThan(0);
 
         // Modified matrices should exist for all criteria
         expect(Object.keys(result.modifiedMatrices).sort()).toEqual([...SAMPLE_PROBLEM.criteriaNames].sort());
