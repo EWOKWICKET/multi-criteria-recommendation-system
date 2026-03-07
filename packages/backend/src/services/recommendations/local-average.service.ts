@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { PositionStep, RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
-import { isCurrentWinner, improveUntilWinner } from './improve-until-winner.service.js';
+import { isCurrentWinner } from './improve-until-winner.service.js';
 
 type LocalAverageParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -107,24 +107,11 @@ export function localAverage({
     }
   }
 
-  // Phase 2: If still not winner, keep improving greedily
-  improveUntilWinner({
-    criteriaNames,
-    alternativeNames,
-    localPriorities,
-    currentMatrices,
-    criteriaWeights,
-    targetIndex,
-    steps,
-    stepNumber: steps.length,
-  });
-
   const finalGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-  const newGlobalPriority = finalGlobals[targetIndex];
 
   return {
     originalGlobalPriority,
-    newGlobalPriority,
+    newGlobalPriority: finalGlobals[targetIndex],
     leaderGlobalPriority,
     leaderGlobalPriorityAfter: finalGlobals[bestIndex],
     isWinner: isCurrentWinner(finalGlobals, targetIndex),

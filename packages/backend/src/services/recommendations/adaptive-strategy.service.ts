@@ -32,16 +32,14 @@ export function adaptiveStrategy({
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
-  // Find global winner
   let bestIndex = 0;
   for (let i = 1; i < globalValues.length; i++) {
     if (globalValues[i] > globalValues[bestIndex]) bestIndex = i;
   }
   const leaderGlobalPriority = globalValues[bestIndex];
 
-  // Already the winner
   if (targetIndex === bestIndex) {
-    const result: RecommendationResult = {
+    return {
       originalGlobalPriority,
       newGlobalPriority: originalGlobalPriority,
       leaderGlobalPriority,
@@ -51,47 +49,36 @@ export function adaptiveStrategy({
       steps: [],
       modifiedMatrices: currentMatrices,
     };
-
-    return result;
   }
 
   const steps: PositionStep[] = [];
   let stepNumber = 0;
 
-  // --- Stage 1: Sanitary Minimum ---
-  const stage1Done = runStage1({
+  const ctx: StageContext = {
     criteriaNames,
     alternativeNames,
     localPriorities,
     currentMatrices,
     criteriaWeights,
     targetIndex,
+    bestIndex,
     steps,
-    stepCounter: { value: stepNumber },
-  });
+  };
 
+  // Stage 1: Match the global leader's local priorities
+  const stage1Won = runGlobalLeaderStage(ctx, stepNumber);
   stepNumber = steps.length;
 
-  if (!stage1Done) {
-    // --- Stage 2: Competitive Advantage ---
-    runStage2({
-      criteriaNames,
-      alternativeNames,
-      localPriorities,
-      currentMatrices,
-      criteriaWeights,
-      targetIndex,
-      steps,
-      stepCounter: { value: stepNumber },
-    });
+  // Stage 2: If still not winner, match local leaders (max local priority per criterion)
+  if (!stage1Won) {
+    runLocalLeaderStage(ctx, stepNumber);
   }
 
   const finalGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-  const newGlobalPriority = finalGlobals[targetIndex];
 
-  const result: RecommendationResult = {
+  return {
     originalGlobalPriority,
-    newGlobalPriority,
+    newGlobalPriority: finalGlobals[targetIndex],
     leaderGlobalPriority,
     leaderGlobalPriorityAfter: finalGlobals[bestIndex],
     isWinner: isCurrentWinner(finalGlobals, targetIndex),
@@ -99,76 +86,35 @@ export function adaptiveStrategy({
     steps,
     modifiedMatrices: currentMatrices,
   };
-
-  return result;
 }
 
-type StageParams = {
+type StageContext = {
   criteriaNames: string[];
   alternativeNames: string[];
   localPriorities: Record<string, number[]>;
   currentMatrices: Record<string, PairwiseMatrix>;
   criteriaWeights: number[];
   targetIndex: number;
+  bestIndex: number;
   steps: PositionStep[];
-  stepCounter: { value: number };
 };
 
 /**
- * Stage 1: Bring weak criteria up to their average local priority.
- * Picks the weakest criterion each iteration. Stops early if target becomes winner.
+ * Stage 1: Match the global leader's local priorities per criterion.
  * Returns true if target became the winner during this stage.
  */
-function runStage1(params: StageParams): boolean {
-  const {
-    criteriaNames,
-    alternativeNames,
-    localPriorities,
-    currentMatrices,
-    criteriaWeights,
-    targetIndex,
-    steps,
-    stepCounter,
-  } = params;
+function runGlobalLeaderStage(ctx: StageContext, stepNumber: number): boolean {
+  const { criteriaNames, localPriorities, criteriaWeights, targetIndex, bestIndex, steps } = ctx;
 
-  while (true) {
-    // Find the weakest criterion (largest deficit below average)
-    let weakestCriterion: string | null = null;
-    let worstDeficit = 0;
+  for (const criterion of criteriaNames) {
+    while ((localPriorities[criterion] ?? [])[targetIndex] < (localPriorities[criterion] ?? [])[bestIndex]) {
+      const applied = applyOneStep(criterion, ctx, stepNumber);
+      if (!applied) break;
 
-    for (const criterion of criteriaNames) {
-      const lp = localPriorities[criterion] ?? [];
-      const avg = lp.reduce((sum, val) => sum + val, 0) / lp.length;
-      const targetLP = lp[targetIndex];
-      const deficit = avg - targetLP;
+      stepNumber = steps.length;
 
-      if (deficit > worstDeficit) {
-        worstDeficit = deficit;
-        weakestCriterion = criterion;
-      }
-    }
-
-    if (weakestCriterion === null) break;
-
-    // Apply exactly one step on the weakest criterion
-    const applied = applyOneStep({
-      criterion: weakestCriterion,
-      alternativeNames,
-      localPriorities,
-      currentMatrices,
-      criteriaWeights,
-      criteriaNames,
-      targetIndex,
-      steps,
-      stepCounter,
-    });
-
-    if (!applied) break;
-
-    // Check early stopping
-    const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-    if (isCurrentWinner(newGlobals, targetIndex)) {
-      return true;
+      const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
+      if (isCurrentWinner(newGlobals, targetIndex)) return true;
     }
   }
 
@@ -176,108 +122,35 @@ function runStage1(params: StageParams): boolean {
 }
 
 /**
- * Stage 2: Greedy optimization toward local leaders.
- * Simulates all possible single steps, picks the one with max efficiency (priority growth).
- * Stops when target becomes the winner or no more steps possible.
+ * Stage 2: Match the local leader (max local priority) per criterion.
+ * Returns true if target became the winner during this stage.
  */
-function runStage2(params: StageParams): void {
-  const {
-    criteriaNames,
-    alternativeNames,
-    localPriorities,
-    currentMatrices,
-    criteriaWeights,
-    targetIndex,
-    steps,
-    stepCounter,
-  } = params;
+function runLocalLeaderStage(ctx: StageContext, stepNumber: number): boolean {
+  const { criteriaNames, localPriorities, criteriaWeights, targetIndex, steps } = ctx;
 
-  while (true) {
-    let bestEfficiency = -1;
-    let bestCriterion: string | null = null;
-    let bestCol = -1;
+  for (const criterion of criteriaNames) {
+    const lp = localPriorities[criterion] ?? [];
+    const maxLocalPriority = Math.max(...lp);
 
-    const currentGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-    const currentTargetGlobal = currentGlobals[targetIndex];
+    while ((localPriorities[criterion] ?? [])[targetIndex] < maxLocalPriority) {
+      const applied = applyOneStep(criterion, ctx, stepNumber);
+      if (!applied) break;
 
-    // Find the step with maximum efficiency across all criteria
-    for (const criterion of criteriaNames) {
-      const lp = localPriorities[criterion] ?? [];
-      const maxLP = Math.max(...lp);
+      stepNumber = steps.length;
 
-      if (lp[targetIndex] >= maxLP) continue;
-
-      for (let j = 0; j < alternativeNames.length; j++) {
-        if (j === targetIndex) continue;
-
-        const currentVal = currentMatrices[criterion][targetIndex][j];
-        const scaleIdx = findClosestSaatyIndex(currentVal);
-
-        if (scaleIdx >= SAATY_SCALE.length - 1) continue;
-
-        // Simulate the step to measure efficiency
-        const simMatrix = applySaatyStep({
-          matrix: currentMatrices[criterion],
-          row: targetIndex,
-          col: j,
-          direction: StepDirection.Up,
-        });
-
-        const simLP = { ...localPriorities };
-        simLP[criterion] = calculatePriorityVector(simMatrix);
-
-        const simGlobals = calculateGlobalPriorities(criteriaWeights, simLP, criteriaNames);
-        const efficiency = simGlobals[targetIndex] - currentTargetGlobal;
-
-        if (efficiency > bestEfficiency) {
-          bestEfficiency = efficiency;
-          bestCriterion = criterion;
-          bestCol = j;
-        }
-      }
-    }
-
-    if (bestCriterion === null || bestCol === -1) break;
-
-    // Apply the most efficient step
-    const applied = applySpecificStep({
-      criterion: bestCriterion,
-      col: bestCol,
-      alternativeNames,
-      localPriorities,
-      currentMatrices,
-      criteriaWeights,
-      criteriaNames,
-      targetIndex,
-      steps,
-      stepCounter,
-    });
-
-    if (!applied) break;
-
-    // Check early stopping
-    const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
-    if (isCurrentWinner(newGlobals, targetIndex)) {
-      return;
+      const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
+      if (isCurrentWinner(newGlobals, targetIndex)) return true;
     }
   }
+
+  return false;
 }
 
-type ApplyOneStepParams = {
-  criterion: string;
-  alternativeNames: string[];
-  localPriorities: Record<string, number[]>;
-  currentMatrices: Record<string, PairwiseMatrix>;
-  criteriaWeights: number[];
-  criteriaNames: string[];
-  targetIndex: number;
-  steps: PositionStep[];
-  stepCounter: { value: number };
-};
-
-/** Apply one position step on the given criterion, choosing the opponent with lowest scale index. */
-function applyOneStep(params: ApplyOneStepParams): boolean {
-  const { criterion, alternativeNames, currentMatrices, targetIndex } = params;
+/**
+ * Apply one position step on the given criterion, choosing the opponent with the lowest scale index.
+ */
+function applyOneStep(criterion: string, ctx: StageContext, stepNumber: number): boolean {
+  const { alternativeNames, localPriorities, currentMatrices, criteriaWeights, criteriaNames, targetIndex, steps } = ctx;
 
   let bestCol = -1;
   let lowestScaleIndex = SAATY_SCALE.length;
@@ -296,54 +169,30 @@ function applyOneStep(params: ApplyOneStepParams): boolean {
 
   if (bestCol === -1) return false;
 
-  return applySpecificStep({ ...params, col: bestCol });
-}
-
-type ApplySpecificStepParams = ApplyOneStepParams & { col: number };
-
-/** Apply one position step on the given criterion and column. */
-function applySpecificStep(params: ApplySpecificStepParams): boolean {
-  const {
-    criterion,
-    col,
-    alternativeNames,
-    localPriorities,
-    currentMatrices,
-    criteriaWeights,
-    criteriaNames,
-    targetIndex,
-    steps,
-    stepCounter,
-  } = params;
-
-  const oldValue = currentMatrices[criterion][targetIndex][col];
+  const oldValue = currentMatrices[criterion][targetIndex][bestCol];
 
   currentMatrices[criterion] = applySaatyStep({
     matrix: currentMatrices[criterion],
     row: targetIndex,
-    col,
+    col: bestCol,
     direction: StepDirection.Up,
   });
 
-  const newValue = currentMatrices[criterion][targetIndex][col];
+  const newValue = currentMatrices[criterion][targetIndex][bestCol];
 
   localPriorities[criterion] = calculatePriorityVector(currentMatrices[criterion]);
 
   const newGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
 
-  stepCounter.value++;
-
-  const step: PositionStep = {
-    stepNumber: stepCounter.value,
+  steps.push({
+    stepNumber: stepNumber + 1,
     criterion,
-    comparedTo: alternativeNames[col],
+    comparedTo: alternativeNames[bestCol],
     oldValue,
     newValue,
     localPriorityAfterStep: (localPriorities[criterion] ?? [])[targetIndex],
     globalPriorityAfterStep: newGlobals[targetIndex],
-  };
-
-  steps.push(step);
+  });
 
   return true;
 }

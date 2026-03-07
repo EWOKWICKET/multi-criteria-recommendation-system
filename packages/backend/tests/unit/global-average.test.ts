@@ -91,12 +91,12 @@ describe('globalAverage (Algorithm 3)', () => {
     expect(anyChanged).toBe(true);
   });
 
-  it('skips phase 1 for the median but still improves in phase 2', () => {
+  it('stops with zero steps when target is the median (no baseline to match)', () => {
     // With 3 alternatives sorted by global priority, index 1 (A2) is the median
     const result = globalAverage(makeParams(1));
 
-    // Phase 1 has no work (median matches itself), but phase 2 keeps improving toward winner
-    expect(result.totalSteps).toBeGreaterThan(0);
-    expect(result.newGlobalPriority).toBeGreaterThan(result.originalGlobalPriority);
+    // Phase 1 has no work (median matches itself) and algorithm stops — no Phase 2
+    expect(result.totalSteps).toBe(0);
+    expect(result.newGlobalPriority).toBe(result.originalGlobalPriority);
   });
 });
