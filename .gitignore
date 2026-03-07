@@ -4,3 +4,6 @@ dist/
 *.md
 !README.md
 !experiments.md
+.env*
+!.env.example
+logs/
