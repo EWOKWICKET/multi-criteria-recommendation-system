@@ -3,7 +3,9 @@ import path from 'node:path';
 import type { FastifyBaseLogger } from 'fastify';
 import pino from 'pino';
 
-const isProduction = process.env['NODE_ENV'] === 'production';
+const nodeEnv = process.env['NODE_ENV'];
+const isProduction = nodeEnv === 'production';
+const isTest = nodeEnv === 'test';
 const logFile = process.env['LOG_FILE'];
 const projectRoot = path.resolve(fileURLToPath(import.meta.url), '../../../../..');
 
@@ -21,6 +23,6 @@ function buildTransport(): pino.TransportMultiOptions {
 }
 
 export const logger: FastifyBaseLogger = pino({
-  level: process.env['LOG_LEVEL'] || 'info',
+  level: process.env['LOG_LEVEL'] || (isTest ? 'silent' : 'info'),
   transport: buildTransport(),
 });
