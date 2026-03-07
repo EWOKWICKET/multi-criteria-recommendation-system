@@ -1,5 +1,5 @@
 /**
- * Generates 100 hard experiments + edge cases, runs all 5 recommendation algorithms,
+ * Generates 1000 hard experiments + edge cases, runs all 5 recommendation algorithms,
  * and writes summary statistics to experiments.md.
  */
 
@@ -32,7 +32,6 @@ type AlgoResult = {
   leaderGlobalPriority: number;
   leaderGlobalPriorityAfter: number;
   gap: number;
-  efficiency: number;
   timeMs: number;
 };
 
@@ -536,8 +535,6 @@ async function runExperiment(config: ExperimentConfig): Promise<ExperimentResult
         leaderGlobalPriorityAfter: number;
       }>(`${BASE}/recommendations/${algo}`, body);
       const timeMs = performance.now() - start;
-      const priorityGain = res.newGlobalPriority - res.originalGlobalPriority;
-      const efficiency = res.totalSteps > 0 ? (priorityGain / res.totalSteps) * 1000 : 0;
 
       results.push({
         algorithm: algo,
@@ -549,7 +546,6 @@ async function runExperiment(config: ExperimentConfig): Promise<ExperimentResult
         leaderGlobalPriority: res.leaderGlobalPriority,
         leaderGlobalPriorityAfter: res.leaderGlobalPriorityAfter,
         gap: res.newGlobalPriority - res.leaderGlobalPriorityAfter,
-        efficiency,
         timeMs,
       });
     } catch (err) {
@@ -563,7 +559,6 @@ async function runExperiment(config: ExperimentConfig): Promise<ExperimentResult
         leaderGlobalPriority: 0,
         leaderGlobalPriorityAfter: 0,
         gap: 0,
-        efficiency: 0,
         timeMs: performance.now() - start,
       });
       console.error(`  [FAIL] ${algo}: ${(err as Error).message}`);
@@ -619,6 +614,23 @@ const EDGE_CASE_DESCRIPTIONS = [
   ],
 ];
 
+/**
+ * Find the best algorithm(s) for an experiment.
+ * Among winners: fewest steps wins. Tiebreaker: smallest gap (least overshoot).
+ */
+function findBestAlgorithms(exp: ExperimentResult): AlgoResult[] {
+  const winners = exp.results.filter((r) => r.isWinner && r.totalSteps > 0);
+
+  if (winners.length === 0) return [];
+
+  const minSteps = Math.min(...winners.map((r) => r.totalSteps));
+  const fewestSteps = winners.filter((r) => r.totalSteps === minSteps);
+
+  const minGap = Math.min(...fewestSteps.map((r) => Math.abs(r.gap)));
+
+  return fewestSteps.filter((r) => Math.abs(Math.abs(r.gap) - minGap) < 1e-6);
+}
+
 function formatResults(experiments: ExperimentResult[]): string {
   const randomCount = experiments.filter((e) => !e.config.name.startsWith('Edge')).length;
   const edgeCount = experiments.filter((e) => e.config.name.startsWith('Edge')).length;
@@ -640,10 +652,8 @@ function formatResults(experiments: ExperimentResult[]): string {
 
   // Overall Statistics
   md += '### Overall Statistics\n\n';
-  md +=
-    '| Algorithm | Avg Steps | Median Steps | Win Rate | Avg Gap | Avg Efficiency | Avg Time (ms) | Min Steps | Max Steps |\n';
-  md +=
-    '|-----------|----------:|-------------:|---------:|--------:|---------------:|--------------:|----------:|----------:|\n';
+  md += '| Algorithm | Avg Steps | Median Steps | Win Rate | Avg Gap | Avg Time (ms) | Min Steps | Max Steps |\n';
+  md += '|-----------|----------:|-------------:|---------:|--------:|--------------:|----------:|----------:|\n';
 
   for (const algo of ALGORITHMS) {
     const runs = experiments.map((e) => e.results.find((r) => r.algorithm === algo)!).filter((r) => r.totalSteps >= 0);
@@ -652,12 +662,9 @@ function formatResults(experiments: ExperimentResult[]): string {
     const avgSteps = steps.reduce((s, v) => s + v, 0) / steps.length;
     const medianSteps = steps[Math.floor(steps.length / 2)];
     const avgGap = runs.reduce((s, r) => s + r.gap, 0) / runs.length;
-    const runsWithSteps = runs.filter((r) => r.totalSteps > 0);
-    const avgEfficiency =
-      runsWithSteps.length > 0 ? runsWithSteps.reduce((s, r) => s + r.efficiency, 0) / runsWithSteps.length : 0;
     const avgTime = runs.reduce((s, r) => s + r.timeMs, 0) / runs.length;
 
-    md += `| ${ALGO_LABELS[algo]} | ${avgSteps.toFixed(1)} | ${medianSteps} | ${wins}/${runs.length} (${((wins / runs.length) * 100).toFixed(0)}%) | ${(avgGap >= 0 ? '+' : '') + avgGap.toFixed(4)} | ${avgEfficiency.toFixed(2)} | ${avgTime.toFixed(1)} | ${steps[0]} | ${steps[steps.length - 1]} |\n`;
+    md += `| ${ALGO_LABELS[algo]} | ${avgSteps.toFixed(1)} | ${medianSteps} | ${wins}/${runs.length} (${((wins / runs.length) * 100).toFixed(0)}%) | ${(avgGap >= 0 ? '+' : '') + avgGap.toFixed(4)} | ${avgTime.toFixed(1)} | ${steps[0]} | ${steps[steps.length - 1]} |\n`;
   }
   md += '\n';
 
@@ -687,18 +694,20 @@ function formatResults(experiments: ExperimentResult[]): string {
   // Edge Case Leaderboard
   const edgeExperiments = experiments.filter((e) => e.config.name.startsWith('Edge'));
   if (edgeExperiments.length > 0) {
-    md += '### Edge Case Leaderboard (highest efficiency)\n\n';
+    md += '### Edge Case Leaderboard (fewest steps, smallest gap)\n\n';
     const edgeBestCounts: Record<string, number> = {};
+
     for (const algo of ALGORITHMS) edgeBestCounts[algo] = 0;
+
     for (const exp of edgeExperiments) {
-      const valid = exp.results.filter((r) => r.totalSteps > 0);
-      if (valid.length === 0) continue;
-      const maxEff = Math.max(...valid.map((r) => r.efficiency));
-      for (const b of valid.filter((r) => Math.abs(r.efficiency - maxEff) < 0.001)) edgeBestCounts[b.algorithm]++;
+      const bests = findBestAlgorithms(exp);
+
+      for (const b of bests) edgeBestCounts[b.algorithm]++;
     }
+
     const edgeLeaderboard = Object.entries(edgeBestCounts).sort((a, b) => b[1] - a[1]);
-    md += '| Rank | Algorithm | Wins (highest efficiency) |\n';
-    md += '|-----:|-----------|-------------------------:|\n';
+    md += '| Rank | Algorithm | Wins |\n';
+    md += '|-----:|-----------|-----:|\n';
     edgeLeaderboard.forEach(([algo, wins], i) => {
       md += `| ${i + 1} | ${ALGO_LABELS[algo]} | ${wins} / ${edgeExperiments.length} |\n`;
     });
@@ -771,19 +780,18 @@ function formatResults(experiments: ExperimentResult[]): string {
   md += '\n';
 
   // Algorithm Leaderboard
-  md += '### Algorithm Leaderboard (highest efficiency)\n\n';
+  md += '### Algorithm Leaderboard (fewest steps among winners, smallest gap tiebreaker)\n\n';
   const bestCounts: Record<string, number> = {};
   const tieCounts: Record<string, number> = {};
+
   for (const algo of ALGORITHMS) {
     bestCounts[algo] = 0;
     tieCounts[algo] = 0;
   }
 
   for (const exp of experiments) {
-    const valid = exp.results.filter((r) => r.totalSteps > 0);
-    if (valid.length === 0) continue;
-    const maxEff = Math.max(...valid.map((r) => r.efficiency));
-    const bests = valid.filter((r) => Math.abs(r.efficiency - maxEff) < 0.001);
+    const bests = findBestAlgorithms(exp);
+
     if (bests.length === 1) bestCounts[bests[0].algorithm]++;
     else for (const b of bests) tieCounts[b.algorithm]++;
   }
@@ -796,25 +804,6 @@ function formatResults(experiments: ExperimentResult[]): string {
   });
   md += '\n';
 
-  // Step Efficiency
-  md += '### Step Efficiency (steps per 0.01 initial gap)\n\n';
-  md += '| Algorithm | Avg Efficiency | Median Efficiency | Best (lowest) | Worst (highest) |\n';
-  md += '|-----------|---------------:|------------------:|--------------:|----------------:|\n';
-
-  for (const algo of ALGORITHMS) {
-    const efficiencies: number[] = [];
-    for (const exp of experiments) {
-      const r = exp.results.find((r) => r.algorithm === algo);
-      if (!r || r.totalSteps < 0 || exp.priorityGapBeforeImprovement <= 0) continue;
-      efficiencies.push(r.totalSteps / (exp.priorityGapBeforeImprovement / 0.01));
-    }
-    efficiencies.sort((a, b) => a - b);
-    const avg = efficiencies.reduce((s, v) => s + v, 0) / efficiencies.length;
-    const median = efficiencies[Math.floor(efficiencies.length / 2)];
-    md += `| ${ALGO_LABELS[algo]} | ${avg.toFixed(2)} | ${median.toFixed(2)} | ${efficiencies[0].toFixed(2)} | ${efficiencies[efficiencies.length - 1].toFixed(2)} |\n`;
-  }
-  md += '\n';
-
   // Time Efficiency
   md += '### Time Efficiency (ms per 100 steps)\n\n';
   md += '| Algorithm | Avg ms/100 steps | Min | Max |\n';
@@ -824,7 +813,7 @@ function formatResults(experiments: ExperimentResult[]): string {
     const ratios: number[] = [];
     for (const exp of experiments) {
       const r = exp.results.find((r) => r.algorithm === algo);
-      if (!r || r.totalSteps <= 0) continue;
+      if (!r || r.totalSteps < 1) continue;
       ratios.push((r.timeMs / r.totalSteps) * 100);
     }
     const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
@@ -882,9 +871,9 @@ function generateExperimentConfigs(): ConfigEntry[] {
   ];
 
   let id = 0;
-  while (configs.length < 100) {
+  while (configs.length < 1000) {
     for (const [c, a] of sizes) {
-      if (configs.length >= 100) break;
+      if (configs.length >= 1000) break;
       id++;
       configs.push({ type: 'random', nC: c, nA: a, seed: id * 37 + 13 });
     }
@@ -1032,7 +1021,7 @@ function buildConfig(type: string, params: ExperimentParams): ExperimentConfig {
 async function main(): Promise<void> {
   const total = EXPERIMENT_CONFIGS.length;
   const edgeCount = EXPERIMENT_CONFIGS.filter((c) => c.type !== 'random').length;
-  console.log(`Starting ${total} experiments (100 random + ${edgeCount} edge cases)...\n`);
+  console.log(`Starting ${total} experiments (${total - edgeCount} random + ${edgeCount} edge cases)...\n`);
 
   const results: ExperimentResult[] = [];
   for (let i = 0; i < total; i++) {
@@ -1044,11 +1033,11 @@ async function main(): Promise<void> {
     results.push(result);
 
     const winners = result.results.filter((r) => r.isWinner).length;
-    const valid = result.results.filter((r) => r.totalSteps > 0);
-    const bestEff = valid.length > 0 ? Math.max(...valid.map((r) => r.efficiency)) : 0;
+    const bests = findBestAlgorithms(result);
+    const bestLabel = bests.length > 0 ? bests.map((b) => b.label).join('/') : '-';
     const maxTime = Math.max(...result.results.map((r) => r.timeMs));
     console.log(
-      `gap=${result.priorityGapBeforeImprovement.toFixed(3)} | win=${winners}/5 | bestEff=${bestEff.toFixed(2)} | maxT=${maxTime.toFixed(1)}ms`
+      `gap=${result.priorityGapBeforeImprovement.toFixed(3)} | win=${winners}/5 | best=${bestLabel} | maxT=${maxTime.toFixed(1)}ms`
     );
   }
 
