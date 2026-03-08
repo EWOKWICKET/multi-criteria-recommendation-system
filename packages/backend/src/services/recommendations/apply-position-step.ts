@@ -1,7 +1,7 @@
 import type { PairwiseMatrix } from '../../types/index.js';
 import type { PositionStep } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
-import { applySaatyStep, StepDirection, SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
+import { SAATY_SCALE, findClosestSaatyIndex } from '../../utils/index.js';
 
 export type StepContext = {
   criteriaNames: string[];
@@ -51,7 +51,39 @@ type Candidate = {
   criterion: string;
   col: number;
   gain: number;
+  nextPairwise: number;
 };
+
+/**
+ * Compute the next pairwise value: snap to nearest Saaty value, then step up.
+ * If the next Saaty value would exceed the cap, step to the cap instead.
+ * Returns null if no improvement is possible.
+ */
+function computeNextPairwise(currentVal: number, capVal: number | undefined): number | null {
+  const scaleIdx = findClosestSaatyIndex(currentVal);
+  const snapped = SAATY_SCALE[scaleIdx];
+
+  let next: number;
+
+  if (currentVal < snapped - 1e-9) {
+    next = snapped;
+  } else if (scaleIdx < SAATY_SCALE.length - 1) {
+    next = SAATY_SCALE[scaleIdx + 1];
+  } else {
+    return null;
+  }
+
+  if (capVal !== undefined) {
+    if (next > capVal + 1e-9) {
+      // Saaty step exceeds cap — step to cap if it's an improvement
+      if (capVal > currentVal + 1e-9) return capVal;
+
+      return null;
+    }
+  }
+
+  return next;
+}
 
 function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) => boolean): Candidate[] {
   const {
@@ -77,25 +109,19 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       if (j === targetIndex) continue;
 
       const currentVal = currentMatrices[criterion][targetIndex][j];
-      const scaleIdx = findClosestSaatyIndex(currentVal);
-
-      if (scaleIdx >= SAATY_SCALE.length - 1) continue;
-
-      // Skip if the next pairwise value would exceed the cap for this criterion + column
-      const nextPairwise = SAATY_SCALE[scaleIdx + 1];
       const criterionCap = pairwiseCap?.[criterion];
+      const capVal = criterionCap?.[j];
 
-      if (criterionCap && nextPairwise > criterionCap[j] + 1e-9) continue;
+      // Determine the target pairwise value for this step
+      const nextPairwise = computeNextPairwise(currentVal, capVal);
+
+      if (nextPairwise === null || nextPairwise <= currentVal + 1e-9) continue;
 
       const trialMatrix = currentMatrices[criterion].map((r) => [...r]);
-      const stepped = applySaatyStep({
-        matrix: trialMatrix,
-        row: targetIndex,
-        col: j,
-        direction: StepDirection.Up,
-      });
+      trialMatrix[targetIndex][j] = nextPairwise;
+      trialMatrix[j][targetIndex] = 1 / nextPairwise;
 
-      const trialLP = calculatePriorityVector(stepped);
+      const trialLP = calculatePriorityVector(trialMatrix);
 
       // Skip if this step would overshoot the LP cap for this criterion
       if (lpCap && lpCap[criterion] !== undefined && trialLP[targetIndex] > lpCap[criterion]) {
@@ -106,7 +132,7 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       const trialGlobals = calculateGlobalPriorities(criteriaWeights, trialLocalPriorities, criteriaNames);
       const gain = trialGlobals[targetIndex] - currentGlobal;
 
-      candidates.push({ criterion, col: j, gain });
+      candidates.push({ criterion, col: j, gain, nextPairwise });
     }
   }
 
@@ -117,17 +143,15 @@ function applyCandidate(candidate: Candidate, ctx: StepContext): number[] {
   const { localPriorities, currentMatrices, criteriaWeights, criteriaNames, alternativeNames, targetIndex, steps } =
     ctx;
 
-  const { criterion, col } = candidate;
+  const { criterion, col, nextPairwise } = candidate;
   const oldValue = currentMatrices[criterion][targetIndex][col];
 
-  currentMatrices[criterion] = applySaatyStep({
-    matrix: currentMatrices[criterion],
-    row: targetIndex,
-    col,
-    direction: StepDirection.Up,
-  });
+  const matrix = currentMatrices[criterion].map((r) => [...r]);
+  matrix[targetIndex][col] = nextPairwise;
+  matrix[col][targetIndex] = 1 / nextPairwise;
+  currentMatrices[criterion] = matrix;
 
-  const newValue = currentMatrices[criterion][targetIndex][col];
+  const newValue = nextPairwise;
 
   localPriorities[criterion] = calculatePriorityVector(currentMatrices[criterion]);
 

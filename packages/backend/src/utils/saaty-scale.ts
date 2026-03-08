@@ -31,15 +31,21 @@ export function findClosestSaatyIndex(value: number): number {
   return Math.abs(SAATY_SCALE[lo] - value) <= Math.abs(SAATY_SCALE[hi] - value) ? lo : hi;
 }
 
-/** Move one position step up or down on the Saaty scale. Clamps at boundaries. */
+/** Move one position step up or down on the Saaty scale. Clamps at boundaries.
+ *  If the current value is between scale points, snap to the nearest one first. */
 export function getNextSaatyValue(current: number, direction: StepDirection): number {
   const index = findClosestSaatyIndex(current);
+  const snapped = SAATY_SCALE[index];
 
   if (direction === StepDirection.Up) {
-    return index < SAATY_SCALE.length - 1 ? SAATY_SCALE[index + 1] : SAATY_SCALE[index];
+    if (current < snapped - 1e-9) return snapped;
+
+    return index < SAATY_SCALE.length - 1 ? SAATY_SCALE[index + 1] : snapped;
   }
 
-  return index > 0 ? SAATY_SCALE[index - 1] : SAATY_SCALE[index];
+  if (current > snapped + 1e-9) return snapped;
+
+  return index > 0 ? SAATY_SCALE[index - 1] : snapped;
 }
 
 type ApplySaatyStepParams = {
