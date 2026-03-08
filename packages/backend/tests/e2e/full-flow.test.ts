@@ -144,12 +144,12 @@ describe('e2e: full AHP + recommendation flow', () => {
         expect(result.actions.length).toBeGreaterThan(0);
         expect(result.actions.length).toBeLessThanOrEqual(SAMPLE_PROBLEM.criteriaNames.length);
 
-        // Each action should have valid LP values
+        // totalSteps should equal number of actions (criteria improved)
+        expect(result.totalSteps).toBe(result.actions.length);
+
+        // Each action should have a criterion name
         for (const action of result.actions) {
           expect(action.criterion).toBeDefined();
-          expect(action.steps).toBeGreaterThan(0);
-          expect(action.localPriorityAfter).toBeGreaterThan(0);
-          expect(action.globalPriorityAfter).toBeGreaterThan(0);
         }
 
         // Modified matrices should exist for all criteria

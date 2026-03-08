@@ -152,20 +152,15 @@ export function renderRecommendationResults({
 
   if (result.actions.length > 0) {
     const targetName = hasRaw ? alternativeNames[targetIndex] : '';
-    const showRealValues = hasRaw;
 
     html += `
-      <h4>Actions (${result.actions.length} criteria, ${result.totalSteps} steps)</h4>
+      <h4>Actions (${result.totalSteps} criteria improved)</h4>
       <table class="results-table">
         <thead>
           <tr>
             <th>#</th>
             <th>Criterion</th>
-            ${showRealValues ? `<th>Old (${targetName})</th><th>New (${targetName})</th>` : ''}
-            <th>Steps</th>
-            <th>LP Before</th>
-            <th>LP After</th>
-            <th>Global Priority</th>
+            ${hasRaw ? `<th>Old (${targetName})</th><th>New (${targetName})</th>` : ''}
           </tr>
         </thead>
         <tbody>
@@ -174,7 +169,7 @@ export function renderRecommendationResults({
     result.actions.forEach((a, i) => {
       let realCols = '';
 
-      if (showRealValues) {
+      if (hasRaw) {
         const oldReal = formatRealValue(rawValues[a.criterion]?.values[targetIndex] ?? 0);
         const newReal =
           computeNewRealValue(a.criterion, { rawValues, modifiedMatrices: result.modifiedMatrices, targetIndex }) ??
@@ -186,10 +181,6 @@ export function renderRecommendationResults({
         <td>${i + 1}</td>
         <td>${a.criterion}</td>
         ${realCols}
-        <td>${a.steps}</td>
-        <td>${a.localPriorityBefore.toFixed(4)}</td>
-        <td>${a.localPriorityAfter.toFixed(4)}</td>
-        <td>${a.globalPriorityAfter.toFixed(4)}</td>
       </tr>`;
     });
 

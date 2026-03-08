@@ -1,31 +1,22 @@
 import type { RecommendationResult, Action, PositionStep } from '../types/index.js';
 
-function mergeStepsIntoActions(steps: PositionStep[], initialLP: Record<string, number>): Action[] {
+function mergeStepsIntoActions(steps: PositionStep[]): Action[] {
+  const seen = new Set<string>();
   const actions: Action[] = [];
 
   for (const step of steps) {
-    const existing = actions.find((a) => a.criterion === step.criterion);
-
-    if (existing) {
-      existing.steps++;
-      existing.localPriorityAfter = step.localPriorityAfterStep;
-      existing.globalPriorityAfter = step.globalPriorityAfterStep;
-    } else {
-      actions.push({
-        criterion: step.criterion,
-        steps: 1,
-        localPriorityBefore: initialLP[step.criterion] ?? 0,
-        localPriorityAfter: step.localPriorityAfterStep,
-        globalPriorityAfter: step.globalPriorityAfterStep,
-      });
+    if (!seen.has(step.criterion)) {
+      seen.add(step.criterion);
+      actions.push({ criterion: step.criterion });
     }
   }
 
   return actions;
 }
 
-export function toResponse(result: RecommendationResult): Omit<RecommendationResult, 'steps' | 'initialLocalPriorities'> & { actions: Action[] } {
-  const { steps, initialLocalPriorities, modifiedMatrices, ...rest } = result;
+export function toResponse(result: RecommendationResult): Omit<RecommendationResult, 'steps' | 'totalSteps'> & { totalSteps: number; actions: Action[] } {
+  const { steps, modifiedMatrices, ...rest } = result;
+  const actions = mergeStepsIntoActions(steps);
 
-  return { ...rest, actions: mergeStepsIntoActions(steps, initialLocalPriorities), modifiedMatrices };
+  return { ...rest, totalSteps: actions.length, actions, modifiedMatrices };
 }

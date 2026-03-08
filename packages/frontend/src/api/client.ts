@@ -22,10 +22,6 @@ type RecommendationRequest = AhpRequest & {
 
 type Action = {
   criterion: string;
-  steps: number;
-  localPriorityBefore: number;
-  localPriorityAfter: number;
-  globalPriorityAfter: number;
 };
 
 type RecommendationResponse = {

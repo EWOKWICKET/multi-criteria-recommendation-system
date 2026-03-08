@@ -29,12 +29,6 @@ export function localAverage({
     localPriorities[name] = calculatePriorityVector(currentMatrices[name]);
   }
 
-  const initialLP: Record<string, number> = {};
-
-  for (const c of criteriaNames) {
-    initialLP[c] = (localPriorities[c] ?? [])[targetIndex];
-  }
-
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
@@ -84,7 +78,7 @@ export function localAverage({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
-        initialLocalPriorities: initialLP,
+    
         modifiedMatrices: currentMatrices,
       };
     }
@@ -100,7 +94,7 @@ export function localAverage({
     isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
     totalSteps: ctx.steps.length,
     steps: ctx.steps,
-    initialLocalPriorities: initialLP,
+
     modifiedMatrices: currentMatrices,
   };
 }

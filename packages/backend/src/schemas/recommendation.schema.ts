@@ -14,10 +14,6 @@ export type RecommendationRequest = Static<typeof RecommendationRequestSchema>;
 
 const ActionSchema = Type.Object({
   criterion: Type.String(),
-  steps: Type.Integer(),
-  localPriorityBefore: Type.Number(),
-  localPriorityAfter: Type.Number(),
-  globalPriorityAfter: Type.Number(),
 });
 
 export const RecommendationResponseSchema = Type.Object({

@@ -29,12 +29,6 @@ export function adaptiveStrategy({
     localPriorities[name] = calculatePriorityVector(currentMatrices[name]);
   }
 
-  const initialLP: Record<string, number> = {};
-
-  for (const c of criteriaNames) {
-    initialLP[c] = (localPriorities[c] ?? [])[targetIndex];
-  }
-
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
@@ -55,7 +49,7 @@ export function adaptiveStrategy({
       isWinner: true,
       totalSteps: 0,
       steps: [],
-      initialLocalPriorities: initialLP,
+  
       modifiedMatrices: currentMatrices,
     };
   }
@@ -106,7 +100,7 @@ export function adaptiveStrategy({
     isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
     totalSteps: ctx.steps.length,
     steps: ctx.steps,
-    initialLocalPriorities: initialLP,
+
     modifiedMatrices: currentMatrices,
   };
 }

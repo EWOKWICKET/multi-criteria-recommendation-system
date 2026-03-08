@@ -11,13 +11,9 @@ export type PositionStep = {
   globalPriorityAfterStep: number;
 };
 
-/** Merged recommendation per criterion */
+/** Recommendation action — one criterion to improve */
 export type Action = {
   criterion: string;
-  steps: number;
-  localPriorityBefore: number;
-  localPriorityAfter: number;
-  globalPriorityAfter: number;
 };
 
 /** Result returned by any recommendation algorithm */
@@ -29,7 +25,5 @@ export type RecommendationResult = {
   isWinner: boolean;
   totalSteps: number;
   steps: PositionStep[];
-  /** Initial local priorities of the target (per criterion), before any changes */
-  initialLocalPriorities: Record<string, number>;
   modifiedMatrices: AlternativeMatrices;
 };
