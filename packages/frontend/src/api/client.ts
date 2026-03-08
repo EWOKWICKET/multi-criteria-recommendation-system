@@ -70,4 +70,4 @@ export function runRecommendation(algorithm: Algorithm, body: RecommendationRequ
   return post(`${BASE}/recommendations/${algorithm}`, body);
 }
 
-export type { AhpRequest, AhpResponse, RecommendationRequest, RecommendationResponse, Action };
+export type { AhpRequest, AhpResponse, RecommendationResponse };

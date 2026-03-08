@@ -1,5 +1,5 @@
 import type { AhpResponse, RecommendationResponse } from '../api/client';
-import { CriterionDirection, type RawCriterionData } from './raw-value-input';
+import { CriterionDirection, type RawCriterionData } from '../types/criterion';
 
 export type ComparisonEntry = {
   label: string;

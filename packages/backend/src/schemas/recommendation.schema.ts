@@ -30,5 +30,3 @@ export const RecommendationResponseSchema = Type.Object({
   actions: Type.Array(ActionSchema),
   modifiedMatrices: Type.Record(Type.String(), PairwiseMatrix),
 });
-
-export type RecommendationResponse = Static<typeof RecommendationResponseSchema>;

@@ -25,5 +25,3 @@ export const AhpSolveResponseSchema = Type.Object({
   isConsistent: Type.Boolean(),
   warnings: Type.Optional(Type.Array(Type.String())),
 });
-
-export type AhpSolveResponse = Static<typeof AhpSolveResponseSchema>;

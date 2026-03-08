@@ -1,17 +1,9 @@
+import { CriterionDirection, type RawCriterionData } from '../types/criterion';
+
 type RawValueInputParams = {
   container: HTMLElement;
   criteria: string[];
   alternatives: string[];
-};
-
-export enum CriterionDirection {
-  Higher = 'higher',
-  Lower = 'lower',
-}
-
-export type RawCriterionData = {
-  values: number[];
-  direction: CriterionDirection;
 };
 
 export function createRawValueInput({ container, criteria, alternatives }: RawValueInputParams): void {
