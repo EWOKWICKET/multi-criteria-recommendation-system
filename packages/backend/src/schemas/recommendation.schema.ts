@@ -14,12 +14,10 @@ export type RecommendationRequest = Static<typeof RecommendationRequestSchema>;
 
 const ActionSchema = Type.Object({
   criterion: Type.String(),
-  comparedTo: Type.String(),
-  oldValue: Type.Number(),
-  newValue: Type.Number(),
   steps: Type.Integer(),
-  localPriorityAfterAction: Type.Number(),
-  globalPriorityAfterAction: Type.Number(),
+  localPriorityBefore: Type.Number(),
+  localPriorityAfter: Type.Number(),
+  globalPriorityAfter: Type.Number(),
 });
 
 export const RecommendationResponseSchema = Type.Object({

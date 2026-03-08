@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep } from './apply-position-step.js';
+import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
 
 type LocalLeaderParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -29,6 +29,12 @@ export function localLeader({
     localPriorities[name] = calculatePriorityVector(currentMatrices[name]);
   }
 
+  const initialLP: Record<string, number> = {};
+
+  for (const c of criteriaNames) {
+    initialLP[c] = (localPriorities[c] ?? [])[targetIndex];
+  }
+
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
@@ -47,6 +53,8 @@ export function localLeader({
     maxLP[c] = Math.max(...(localPriorities[c] ?? []));
   }
 
+  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
+
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -55,6 +63,8 @@ export function localLeader({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
+    lpCap: maxLP,
+    pairwiseCap,
   };
 
   // Greedy: pick highest-ΔU step among criteria where target < max LP
@@ -73,6 +83,7 @@ export function localLeader({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
+        initialLocalPriorities: initialLP,
         modifiedMatrices: currentMatrices,
       };
     }
@@ -88,6 +99,7 @@ export function localLeader({
     isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
     totalSteps: ctx.steps.length,
     steps: ctx.steps,
+    initialLocalPriorities: initialLP,
     modifiedMatrices: currentMatrices,
   };
 }

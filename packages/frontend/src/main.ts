@@ -1,17 +1,17 @@
-import type { Algorithm, AhpResponse } from './api/client';
-import { solveAhp, runRecommendation } from './api/client';
+import type { AhpResponse } from './api/client';
+import { Algorithm, solveAhp, runRecommendation } from './api/client';
 import { createCriteriaForm } from './components/criteria-form';
 import { createCriteriaMatrixInput, readCriteriaMatrix } from './components/matrix-input';
-import { createRawValueInput, readAlternativeMatrices } from './components/raw-value-input';
+import { createRawValueInput, readAlternativeMatrices, readRawValues } from './components/raw-value-input';
 import { renderAhpResults, renderRecommendationResults, renderComparisonResults } from './components/results-display';
 import type { ComparisonEntry } from './components/results-display';
 
 const ALGORITHMS: { value: Algorithm; label: string; description: string }[] = [
-  { value: 'global-leader', label: 'Global Leader', description: 'Match the overall winner' },
-  { value: 'local-leader', label: 'Local Leader', description: 'Match the best per criterion' },
-  { value: 'global-average', label: 'Global Average', description: 'Match the median-ranked alternative' },
-  { value: 'local-average', label: 'Local Average', description: 'Match the per-criterion average' },
-  { value: 'adaptive-strategy', label: 'Adaptive Strategy', description: 'Greedy min-cost optimization' },
+  { value: Algorithm.GlobalLeader, label: 'Global Leader', description: 'Match the overall winner' },
+  { value: Algorithm.LocalLeader, label: 'Local Leader', description: 'Match the best per criterion' },
+  { value: Algorithm.GlobalAverage, label: 'Global Average', description: 'Match the median-ranked alternative' },
+  { value: Algorithm.LocalAverage, label: 'Local Average', description: 'Match the per-criterion average' },
+  { value: Algorithm.AdaptiveStrategy, label: 'Adaptive Strategy', description: 'Greedy min-cost optimization' },
 ];
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -171,6 +171,9 @@ async function handleRecommendation(): Promise<void> {
   };
 
   try {
+    const altContainer = app.querySelector<HTMLElement>('#alternatives-raw-values');
+    const rawValues = altContainer ? readRawValues(altContainer, currentCriteria) : undefined;
+
     if (algorithm === 'all') {
       const entries = await Promise.all(
         ALGORITHMS.map(async (a): Promise<ComparisonEntry> => {
@@ -186,7 +189,13 @@ async function handleRecommendation(): Promise<void> {
     } else {
       const result = await runRecommendation(algorithm as Algorithm, body);
 
-      renderRecommendationResults(recResults, result);
+      renderRecommendationResults({
+        container: recResults,
+        result,
+        rawValues,
+        alternativeNames: currentAlternatives,
+        targetIndex: targetAlternativeIndex,
+      });
     }
   } catch (err) {
     recResults.innerHTML = `<p class="error">${(err as Error).message}</p>`;

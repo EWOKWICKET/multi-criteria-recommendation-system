@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep } from './apply-position-step.js';
+import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
 
 type GlobalLeaderParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -29,6 +29,12 @@ export function globalLeader({
     localPriorities[name] = calculatePriorityVector(currentMatrices[name]);
   }
 
+  const initialLP: Record<string, number> = {};
+
+  for (const c of criteriaNames) {
+    initialLP[c] = (localPriorities[c] ?? [])[targetIndex];
+  }
+
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
@@ -49,6 +55,7 @@ export function globalLeader({
       isWinner: true,
       totalSteps: 0,
       steps: [],
+      initialLocalPriorities: initialLP,
       modifiedMatrices: currentMatrices,
     };
   }
@@ -60,6 +67,8 @@ export function globalLeader({
     leaderLP[c] = (localPriorities[c] ?? [])[bestIndex];
   }
 
+  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
+
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -68,6 +77,8 @@ export function globalLeader({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
+    lpCap: leaderLP,
+    pairwiseCap,
   };
 
   // Greedy: pick highest-ΔU step among criteria where target < leader's LP
@@ -86,6 +97,7 @@ export function globalLeader({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
+        initialLocalPriorities: initialLP,
         modifiedMatrices: currentMatrices,
       };
     }
@@ -101,6 +113,7 @@ export function globalLeader({
     isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
     totalSteps: ctx.steps.length,
     steps: ctx.steps,
+    initialLocalPriorities: initialLP,
     modifiedMatrices: currentMatrices,
   };
 }

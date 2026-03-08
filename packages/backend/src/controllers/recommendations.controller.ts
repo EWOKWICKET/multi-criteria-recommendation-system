@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { RecommendationRequest } from '../schemas/index.js';
-import type { RecommendationResult, Action, PositionStep } from '../types/index.js';
+import type { RecommendationResult } from '../types/index.js';
 import {
   globalLeader as globalLeaderService,
   localLeader as localLeaderService,
@@ -8,42 +8,10 @@ import {
   globalAverage as globalAverageService,
   adaptiveStrategy as adaptiveStrategyService,
 } from '../services/recommendations/index.js';
+import { toResponse } from '../mappers/index.js';
 import { logger } from '../services/logger.service.js';
 
 type RecRequest = FastifyRequest<{ Body: RecommendationRequest }>;
-
-function mergeStepsIntoActions(steps: PositionStep[]): Action[] {
-  const actions: Action[] = [];
-
-  for (const step of steps) {
-    const existing = actions.find((a) => a.criterion === step.criterion && a.comparedTo === step.comparedTo);
-
-    if (existing) {
-      existing.newValue = step.newValue;
-      existing.steps++;
-      existing.localPriorityAfterAction = step.localPriorityAfterStep;
-      existing.globalPriorityAfterAction = step.globalPriorityAfterStep;
-    } else {
-      actions.push({
-        criterion: step.criterion,
-        comparedTo: step.comparedTo,
-        oldValue: step.oldValue,
-        newValue: step.newValue,
-        steps: 1,
-        localPriorityAfterAction: step.localPriorityAfterStep,
-        globalPriorityAfterAction: step.globalPriorityAfterStep,
-      });
-    }
-  }
-
-  return actions;
-}
-
-function toResponse(result: RecommendationResult): Omit<RecommendationResult, 'steps'> & { actions: Action[] } {
-  const { steps, modifiedMatrices, ...rest } = result;
-
-  return { ...rest, actions: mergeStepsIntoActions(steps), modifiedMatrices };
-}
 
 function logRecommendation(algorithm: string, request: RecRequest, result: RecommendationResult): void {
   const { alternativeNames, targetAlternativeIndex } = request.body;

@@ -1,4 +1,5 @@
 import type { AhpResponse, RecommendationResponse } from '../api/client';
+import { CriterionDirection, type RawCriterionData } from './raw-value-input';
 
 export type ComparisonEntry = {
   label: string;
@@ -84,7 +85,58 @@ export function renderAhpResults(container: HTMLElement, result: AhpResponse): v
   container.innerHTML = html;
 }
 
-export function renderRecommendationResults(container: HTMLElement, result: RecommendationResponse): void {
+type RenderRecommendationParams = {
+  container: HTMLElement;
+  result: RecommendationResponse;
+  rawValues?: Record<string, RawCriterionData>;
+  alternativeNames?: string[];
+  targetIndex?: number;
+};
+
+function formatRealValue(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+type RealValueContext = {
+  rawValues: Record<string, RawCriterionData>;
+  modifiedMatrices: Record<string, number[][]>;
+  targetIndex: number;
+};
+
+function computeNewRealValue(criterion: string, ctx: RealValueContext): string | null {
+  const raw = ctx.rawValues[criterion];
+
+  if (!raw) return null;
+
+  const matrix = ctx.modifiedMatrices[criterion];
+
+  if (!matrix) return null;
+
+  // Find a reference alternative (any j != targetIndex) to back-compute the real value
+  for (let j = 0; j < raw.values.length; j++) {
+    if (j === ctx.targetIndex || !raw.values[j]) continue;
+
+    const pairwise = matrix[ctx.targetIndex][j];
+
+    if (raw.direction === CriterionDirection.Higher) {
+      return formatRealValue(pairwise * raw.values[j]);
+    }
+
+    return formatRealValue(raw.values[j] / pairwise);
+  }
+
+  return null;
+}
+
+export function renderRecommendationResults({
+  container,
+  result,
+  rawValues,
+  alternativeNames,
+  targetIndex,
+}: RenderRecommendationParams): void {
+  const hasRaw = rawValues && alternativeNames && targetIndex !== undefined;
+
   let html = `
     <div class="results">
       <h3>Recommendation Results</h3>
@@ -99,18 +151,20 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
   `;
 
   if (result.actions.length > 0) {
+    const targetName = hasRaw ? alternativeNames[targetIndex] : '';
+    const showRealValues = hasRaw;
+
     html += `
-      <h4>Actions (${result.actions.length} merged from ${result.totalSteps} steps)</h4>
+      <h4>Actions (${result.actions.length} criteria, ${result.totalSteps} steps)</h4>
       <table class="results-table">
         <thead>
           <tr>
             <th>#</th>
             <th>Criterion</th>
-            <th>Compared To</th>
-            <th>Old Value</th>
-            <th>New Value</th>
+            ${showRealValues ? `<th>Old (${targetName})</th><th>New (${targetName})</th>` : ''}
             <th>Steps</th>
-            <th>Local Priority</th>
+            <th>LP Before</th>
+            <th>LP After</th>
             <th>Global Priority</th>
           </tr>
         </thead>
@@ -118,15 +172,24 @@ export function renderRecommendationResults(container: HTMLElement, result: Reco
     `;
 
     result.actions.forEach((a, i) => {
+      let realCols = '';
+
+      if (showRealValues) {
+        const oldReal = formatRealValue(rawValues[a.criterion]?.values[targetIndex] ?? 0);
+        const newReal =
+          computeNewRealValue(a.criterion, { rawValues, modifiedMatrices: result.modifiedMatrices, targetIndex }) ??
+          '-';
+        realCols = `<td>${oldReal}</td><td>${newReal}</td>`;
+      }
+
       html += `<tr>
         <td>${i + 1}</td>
         <td>${a.criterion}</td>
-        <td>${a.comparedTo}</td>
-        <td>${a.oldValue.toFixed(4)}</td>
-        <td>${a.newValue.toFixed(4)}</td>
+        ${realCols}
         <td>${a.steps}</td>
-        <td>${a.localPriorityAfterAction.toFixed(4)}</td>
-        <td>${a.globalPriorityAfterAction.toFixed(4)}</td>
+        <td>${a.localPriorityBefore.toFixed(4)}</td>
+        <td>${a.localPriorityAfter.toFixed(4)}</td>
+        <td>${a.globalPriorityAfter.toFixed(4)}</td>
       </tr>`;
     });
 

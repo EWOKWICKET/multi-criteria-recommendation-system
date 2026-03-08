@@ -4,7 +4,15 @@ type RawValueInputParams = {
   alternatives: string[];
 };
 
-type CriterionDirection = 'higher' | 'lower';
+export enum CriterionDirection {
+  Higher = 'higher',
+  Lower = 'lower',
+}
+
+export type RawCriterionData = {
+  values: number[];
+  direction: CriterionDirection;
+};
 
 export function createRawValueInput({ container, criteria, alternatives }: RawValueInputParams): void {
   for (const criterion of criteria) {
@@ -84,7 +92,7 @@ export function readAlternativeMatrices(container: HTMLElement, criteria: string
     if (!section) continue;
 
     const directionSelect = section.querySelector<HTMLSelectElement>(`[data-criterion-direction="${criterion}"]`);
-    const direction: CriterionDirection = (directionSelect?.value as CriterionDirection) || 'higher';
+    const direction: CriterionDirection = (directionSelect?.value as CriterionDirection) || CriterionDirection.Higher;
 
     const inputs = section.querySelectorAll<HTMLInputElement>('input[data-alternative-index]');
     const values: number[] = [];
@@ -110,6 +118,30 @@ export function readAlternativeMatrices(container: HTMLElement, criteria: string
   return result;
 }
 
+export function readRawValues(container: HTMLElement, criteria: string[]): Record<string, RawCriterionData> {
+  const result: Record<string, RawCriterionData> = {};
+
+  for (const criterion of criteria) {
+    const section = container.querySelector<HTMLElement>(`[data-criterion="${criterion}"]`);
+
+    if (!section) continue;
+
+    const directionSelect = section.querySelector<HTMLSelectElement>(`[data-criterion-direction="${criterion}"]`);
+    const direction: CriterionDirection = (directionSelect?.value as CriterionDirection) || CriterionDirection.Higher;
+
+    const inputs = section.querySelectorAll<HTMLInputElement>('input[data-alternative-index]');
+    const values: number[] = [];
+
+    for (const input of inputs) {
+      values.push(parseFloat(input.value) || 0);
+    }
+
+    result[criterion] = { values, direction };
+  }
+
+  return result;
+}
+
 function convertToMatrix(values: number[], direction: CriterionDirection): number[][] {
   const n = values.length;
   const matrix: number[][] = [];
@@ -120,7 +152,7 @@ function convertToMatrix(values: number[], direction: CriterionDirection): numbe
     for (let j = 0; j < n; j++) {
       if (i === j) {
         row.push(1);
-      } else if (direction === 'higher') {
+      } else if (direction === CriterionDirection.Higher) {
         row.push(values[i] / values[j]);
       } else {
         row.push(values[j] / values[i]);

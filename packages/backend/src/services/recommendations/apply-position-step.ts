@@ -11,12 +11,41 @@ export type StepContext = {
   criteriaWeights: number[];
   targetIndex: number;
   steps: PositionStep[];
+  /** Per-criterion LP cap — skip candidates that would overshoot this threshold */
+  lpCap?: Record<string, number>;
+  /** Per-criterion pairwise cap: pairwiseCap[criterion][j] = max allowed value for matrix[target][j] */
+  pairwiseCap?: Record<string, number[]>;
 };
 
-export type StepResult = {
+type StepResult = {
   applied: boolean;
   newGlobals: number[];
 };
+
+/**
+ * Compute pairwise caps: for each criterion, the target's pairwise values
+ * cannot exceed the local leader's pairwise values on that criterion.
+ */
+export function computePairwiseCap(
+  localPriorities: Record<string, number[]>,
+  matrices: Record<string, PairwiseMatrix>,
+  criteriaNames: string[],
+): Record<string, number[]> {
+  const cap: Record<string, number[]> = {};
+
+  for (const c of criteriaNames) {
+    const lp = localPriorities[c] ?? [];
+    let leaderIdx = 0;
+
+    for (let i = 1; i < lp.length; i++) {
+      if (lp[i] > lp[leaderIdx]) leaderIdx = i;
+    }
+
+    cap[c] = [...(matrices[c]?.[leaderIdx] ?? [])];
+  }
+
+  return cap;
+}
 
 type Candidate = {
   criterion: string;
@@ -25,7 +54,16 @@ type Candidate = {
 };
 
 function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) => boolean): Candidate[] {
-  const { criteriaNames, alternativeNames, localPriorities, currentMatrices, criteriaWeights, targetIndex } = ctx;
+  const {
+    criteriaNames,
+    alternativeNames,
+    localPriorities,
+    currentMatrices,
+    criteriaWeights,
+    targetIndex,
+    lpCap,
+    pairwiseCap,
+  } = ctx;
 
   const currentGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const currentGlobal = currentGlobals[targetIndex];
@@ -43,6 +81,12 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
 
       if (scaleIdx >= SAATY_SCALE.length - 1) continue;
 
+      // Skip if the next pairwise value would exceed the cap for this criterion + column
+      const nextPairwise = SAATY_SCALE[scaleIdx + 1];
+      const criterionCap = pairwiseCap?.[criterion];
+
+      if (criterionCap && nextPairwise > criterionCap[j] + 1e-9) continue;
+
       const trialMatrix = currentMatrices[criterion].map((r) => [...r]);
       const stepped = applySaatyStep({
         matrix: trialMatrix,
@@ -52,6 +96,12 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       });
 
       const trialLP = calculatePriorityVector(stepped);
+
+      // Skip if this step would overshoot the LP cap for this criterion
+      if (lpCap && lpCap[criterion] !== undefined && trialLP[targetIndex] > lpCap[criterion]) {
+        continue;
+      }
+
       const trialLocalPriorities = { ...localPriorities, [criterion]: trialLP };
       const trialGlobals = calculateGlobalPriorities(criteriaWeights, trialLocalPriorities, criteriaNames);
       const gain = trialGlobals[targetIndex] - currentGlobal;

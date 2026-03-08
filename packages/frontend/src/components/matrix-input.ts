@@ -5,7 +5,7 @@ type MatrixInputParams = {
   names: string[];
 };
 
-export function createMatrixInput({ container, size, label, names }: MatrixInputParams): void {
+function createMatrixInput({ container, size, label, names }: MatrixInputParams): void {
   const wrapper = document.createElement('div');
   wrapper.className = 'matrix-input';
 
@@ -80,7 +80,7 @@ function fillReciprocal({ table, row, col, value }: ReciprocalParams): void {
   }
 }
 
-export function readMatrix(table: HTMLTableElement): number[][] {
+function readMatrix(table: HTMLTableElement): number[][] {
   const rows = table.querySelectorAll('tr');
   const matrix: number[][] = [];
 

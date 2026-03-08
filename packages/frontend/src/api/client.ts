@@ -22,12 +22,10 @@ type RecommendationRequest = AhpRequest & {
 
 type Action = {
   criterion: string;
-  comparedTo: string;
-  oldValue: number;
-  newValue: number;
   steps: number;
-  localPriorityAfterAction: number;
-  globalPriorityAfterAction: number;
+  localPriorityBefore: number;
+  localPriorityAfter: number;
+  globalPriorityAfter: number;
 };
 
 type RecommendationResponse = {
@@ -60,7 +58,13 @@ export function solveAhp(body: AhpRequest): Promise<AhpResponse> {
   return post(`${BASE}/ahp/solve`, body);
 }
 
-export type Algorithm = 'global-leader' | 'local-leader' | 'global-average' | 'local-average' | 'adaptive-strategy';
+export enum Algorithm {
+  GlobalLeader = 'global-leader',
+  LocalLeader = 'local-leader',
+  GlobalAverage = 'global-average',
+  LocalAverage = 'local-average',
+  AdaptiveStrategy = 'adaptive-strategy',
+}
 
 export function runRecommendation(algorithm: Algorithm, body: RecommendationRequest): Promise<RecommendationResponse> {
   return post(`${BASE}/recommendations/${algorithm}`, body);

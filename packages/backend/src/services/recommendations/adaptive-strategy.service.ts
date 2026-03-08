@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, type StepContext } from './apply-position-step.js';
+import { applyGreedyStep, computePairwiseCap, type StepContext } from './apply-position-step.js';
 
 type AdaptiveStrategyParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -29,6 +29,12 @@ export function adaptiveStrategy({
     localPriorities[name] = calculatePriorityVector(currentMatrices[name]);
   }
 
+  const initialLP: Record<string, number> = {};
+
+  for (const c of criteriaNames) {
+    initialLP[c] = (localPriorities[c] ?? [])[targetIndex];
+  }
+
   const globalValues = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const originalGlobalPriority = globalValues[targetIndex];
 
@@ -49,6 +55,7 @@ export function adaptiveStrategy({
       isWinner: true,
       totalSteps: 0,
       steps: [],
+      initialLocalPriorities: initialLP,
       modifiedMatrices: currentMatrices,
     };
   }
@@ -63,6 +70,8 @@ export function adaptiveStrategy({
     maxLP[c] = Math.max(...lp);
   }
 
+  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
+
   const ctx: StepContext = {
     criteriaNames,
     alternativeNames,
@@ -71,6 +80,8 @@ export function adaptiveStrategy({
     criteriaWeights,
     targetIndex,
     steps: [],
+    lpCap: avgLP,
+    pairwiseCap,
   };
 
   // Stage 1: Local Average — run to FULL completion (target >= avg LP on all criteria)
@@ -80,7 +91,8 @@ export function adaptiveStrategy({
   const stage1Globals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
 
   if (!isCurrentWinner(stage1Globals, targetIndex, bestIndex)) {
-    // Stage 2: Local Leader — greedy steps until target >= max LP on all criteria, with early stopping
+    // Stage 2: Local Leader — switch cap to max LP
+    ctx.lpCap = maxLP;
     runStageWithEarlyStopping(ctx, bestIndex, (c) => (localPriorities[c] ?? [])[targetIndex] < maxLP[c]);
   }
 
@@ -94,6 +106,7 @@ export function adaptiveStrategy({
     isWinner: isCurrentWinner(finalGlobals, targetIndex, bestIndex),
     totalSteps: ctx.steps.length,
     steps: ctx.steps,
+    initialLocalPriorities: initialLP,
     modifiedMatrices: currentMatrices,
   };
 }

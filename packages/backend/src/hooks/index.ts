@@ -1,2 +1,2 @@
-export { registerErrorHandlers } from './error-handler.hook.js';
-export { ahpValidationHook, recommendationValidationHook } from './validation.hook.js';
+export * from './error-handler.hook.js';
+export * from './validation.hook.js';
