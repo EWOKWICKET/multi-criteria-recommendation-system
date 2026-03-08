@@ -49,7 +49,6 @@ export function globalLeader({
       isWinner: true,
       totalSteps: 0,
       steps: [],
-  
       modifiedMatrices: currentMatrices,
     };
   }
@@ -91,7 +90,6 @@ export function globalLeader({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
-    
         modifiedMatrices: currentMatrices,
       };
     }

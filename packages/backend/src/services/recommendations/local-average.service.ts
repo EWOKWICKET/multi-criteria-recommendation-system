@@ -78,7 +78,7 @@ export function localAverage({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
-    
+
         modifiedMatrices: currentMatrices,
       };
     }

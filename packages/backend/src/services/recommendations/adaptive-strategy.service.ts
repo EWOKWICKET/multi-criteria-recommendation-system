@@ -49,7 +49,6 @@ export function adaptiveStrategy({
       isWinner: true,
       totalSteps: 0,
       steps: [],
-  
       modifiedMatrices: currentMatrices,
     };
   }

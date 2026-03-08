@@ -14,7 +14,9 @@ function mergeStepsIntoActions(steps: PositionStep[]): Action[] {
   return actions;
 }
 
-export function toResponse(result: RecommendationResult): Omit<RecommendationResult, 'steps' | 'totalSteps'> & { totalSteps: number; actions: Action[] } {
+export function toResponse(
+  result: RecommendationResult
+): Omit<RecommendationResult, 'steps' | 'totalSteps'> & { totalSteps: number; actions: Action[] } {
   const { steps, modifiedMatrices, ...rest } = result;
   const actions = mergeStepsIntoActions(steps);
 

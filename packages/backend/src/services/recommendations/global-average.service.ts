@@ -81,7 +81,6 @@ export function globalAverage({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
-    
         modifiedMatrices: currentMatrices,
       };
     }

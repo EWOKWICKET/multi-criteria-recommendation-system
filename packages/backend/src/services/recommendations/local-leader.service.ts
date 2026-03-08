@@ -77,7 +77,7 @@ export function localLeader({
         isWinner: true,
         totalSteps: ctx.steps.length,
         steps: ctx.steps,
-    
+
         modifiedMatrices: currentMatrices,
       };
     }

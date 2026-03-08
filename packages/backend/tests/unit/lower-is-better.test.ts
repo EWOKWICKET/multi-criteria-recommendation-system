@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { globalLeader, localLeader, globalAverage, localAverage, adaptiveStrategy } from '../../src/services/recommendations';
+import {
+  globalLeader,
+  localLeader,
+  globalAverage,
+  localAverage,
+  adaptiveStrategy,
+} from '../../src/services/recommendations';
 
 /**
  * Regression test for "lower is better" criteria with non-Saaty-aligned pairwise values.
@@ -68,12 +74,10 @@ describe('lower-is-better with non-Saaty-aligned values', () => {
   ];
 
   const aggressiveAlgorithms = algorithms.filter(({ name }) =>
-    ['globalLeader', 'localLeader', 'adaptiveStrategy'].includes(name),
+    ['globalLeader', 'localLeader', 'adaptiveStrategy'].includes(name)
   );
 
-  const conservativeAlgorithms = algorithms.filter(({ name }) =>
-    ['globalAverage', 'localAverage'].includes(name),
-  );
+  const conservativeAlgorithms = algorithms.filter(({ name }) => ['globalAverage', 'localAverage'].includes(name));
 
   for (const { name, fn } of aggressiveAlgorithms) {
     it(`${name}: improves gb (highest price) to become winner`, () => {

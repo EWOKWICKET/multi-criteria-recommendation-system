@@ -29,7 +29,7 @@ type StepResult = {
 export function computePairwiseCap(
   localPriorities: Record<string, number[]>,
   matrices: Record<string, PairwiseMatrix>,
-  criteriaNames: string[],
+  criteriaNames: string[]
 ): Record<string, number[]> {
   const cap: Record<string, number[]> = {};
 
