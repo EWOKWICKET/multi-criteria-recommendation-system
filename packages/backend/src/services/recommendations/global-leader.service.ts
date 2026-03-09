@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type GlobalLeaderParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -53,15 +53,6 @@ export function globalLeader({
     };
   }
 
-  // Snapshot leader's local priorities as baseline
-  const leaderLP: Record<string, number> = {};
-
-  for (const c of criteriaNames) {
-    leaderLP[c] = (localPriorities[c] ?? [])[bestIndex];
-  }
-
-  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
-
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -70,13 +61,16 @@ export function globalLeader({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
-    lpCap: leaderLP,
-    pairwiseCap,
+    skipPairwiseCap: true,
   };
 
-  // Greedy: pick highest-ΔU step among criteria where target < leader's LP
+  // Greedy: pick highest-ΔU step among criteria where target < leader's current LP
   for (;;) {
-    const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < leaderLP[c];
+    const isEligible = (c: string): boolean => {
+      const lp = localPriorities[c] ?? [];
+
+      return lp[targetIndex] < lp[bestIndex];
+    };
     const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);
 
     if (!applied) break;

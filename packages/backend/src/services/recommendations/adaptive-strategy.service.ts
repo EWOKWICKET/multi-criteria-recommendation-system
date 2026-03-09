@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, computePairwiseCap, type StepContext } from './apply-position-step.js';
+import { applyGreedyStep, type StepContext } from './apply-position-step.js';
 
 type AdaptiveStrategyParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -63,8 +63,6 @@ export function adaptiveStrategy({
     maxLP[c] = Math.max(...lp);
   }
 
-  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
-
   const ctx: StepContext = {
     criteriaNames,
     alternativeNames,
@@ -73,8 +71,6 @@ export function adaptiveStrategy({
     criteriaWeights,
     targetIndex,
     steps: [],
-    lpCap: avgLP,
-    pairwiseCap,
   };
 
   // Stage 1: Local Average — run to FULL completion (target >= avg LP on all criteria)
@@ -84,8 +80,7 @@ export function adaptiveStrategy({
   const stage1Globals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
 
   if (!isCurrentWinner(stage1Globals, targetIndex, bestIndex)) {
-    // Stage 2: Local Leader — switch cap to max LP
-    ctx.lpCap = maxLP;
+    // Stage 2: Local Leader
     runStageWithEarlyStopping(ctx, bestIndex, (c) => (localPriorities[c] ?? [])[targetIndex] < maxLP[c]);
   }
 

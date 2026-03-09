@@ -11,10 +11,7 @@ export type StepContext = {
   criteriaWeights: number[];
   targetIndex: number;
   steps: PositionStep[];
-  /** Per-criterion LP cap — skip candidates that would overshoot this threshold */
-  lpCap?: Record<string, number>;
-  /** Per-criterion pairwise cap: pairwiseCap[criterion][j] = max allowed value for matrix[target][j] */
-  pairwiseCap?: Record<string, number[]>;
+  skipPairwiseCap?: boolean;
 };
 
 type StepResult = {
@@ -86,19 +83,15 @@ function computeNextPairwise(currentVal: number, capVal: number | undefined): nu
 }
 
 function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) => boolean): Candidate[] {
-  const {
-    criteriaNames,
-    alternativeNames,
-    localPriorities,
-    currentMatrices,
-    criteriaWeights,
-    targetIndex,
-    lpCap,
-    pairwiseCap,
-  } = ctx;
+  const { criteriaNames, alternativeNames, localPriorities, currentMatrices, criteriaWeights, targetIndex } = ctx;
 
   const currentGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const currentGlobal = currentGlobals[targetIndex];
+
+  // Compute pairwise cap dynamically from current state (unless skipped)
+  const pairwiseCap = ctx.skipPairwiseCap
+    ? null
+    : computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
 
   const candidates: Candidate[] = [];
 
@@ -109,8 +102,7 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       if (j === targetIndex) continue;
 
       const currentVal = currentMatrices[criterion][targetIndex][j];
-      const criterionCap = pairwiseCap?.[criterion];
-      const capVal = criterionCap?.[j];
+      const capVal = pairwiseCap?.[criterion]?.[j];
 
       // Determine the target pairwise value for this step
       const nextPairwise = computeNextPairwise(currentVal, capVal);
@@ -122,12 +114,6 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       trialMatrix[j][targetIndex] = 1 / nextPairwise;
 
       const trialLP = calculatePriorityVector(trialMatrix);
-
-      // Skip if this step would overshoot the LP cap for this criterion
-      if (lpCap && lpCap[criterion] !== undefined && trialLP[targetIndex] > lpCap[criterion]) {
-        continue;
-      }
-
       const trialLocalPriorities = { ...localPriorities, [criterion]: trialLP };
       const trialGlobals = calculateGlobalPriorities(criteriaWeights, trialLocalPriorities, criteriaNames);
       const gain = trialGlobals[targetIndex] - currentGlobal;

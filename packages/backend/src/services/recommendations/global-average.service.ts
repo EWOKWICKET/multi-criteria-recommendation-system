@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type GlobalAverageParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -51,8 +51,6 @@ export function globalAverage({
     medianLP[c] = (localPriorities[c] ?? [])[medianIndex];
   }
 
-  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
-
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -61,8 +59,6 @@ export function globalAverage({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
-    lpCap: medianLP,
-    pairwiseCap,
   };
 
   // Greedy: pick highest-ΔU step among criteria where target < median's LP

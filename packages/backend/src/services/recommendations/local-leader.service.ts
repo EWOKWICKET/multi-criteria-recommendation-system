@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type LocalLeaderParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -47,8 +47,6 @@ export function localLeader({
     maxLP[c] = Math.max(...(localPriorities[c] ?? []));
   }
 
-  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
-
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -57,8 +55,6 @@ export function localLeader({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
-    lpCap: maxLP,
-    pairwiseCap,
   };
 
   // Greedy: pick highest-ΔU step among criteria where target < max LP

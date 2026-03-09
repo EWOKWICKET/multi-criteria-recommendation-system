@@ -2,7 +2,7 @@ import type { PairwiseMatrix, AlternativeMatrices } from '../../types/index.js';
 import type { RecommendationResult } from '../../types/index.js';
 import { calculatePriorityVector, calculateGlobalPriorities } from '../baseline/index.js';
 import { isCurrentWinner } from './current-winner.js';
-import { applyGreedyStep, computePairwiseCap } from './apply-position-step.js';
+import { applyGreedyStep } from './apply-position-step.js';
 
 type LocalAverageParams = {
   criteriaMatrix: PairwiseMatrix;
@@ -48,8 +48,6 @@ export function localAverage({
     avgLP[c] = lp.reduce((acc, val) => acc + val, 0) / lp.length;
   }
 
-  const pairwiseCap = computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
-
   const ctx = {
     criteriaNames,
     alternativeNames,
@@ -58,8 +56,6 @@ export function localAverage({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
-    lpCap: avgLP,
-    pairwiseCap,
   };
 
   // Greedy: pick highest-ΔU step among criteria where target < average LP
