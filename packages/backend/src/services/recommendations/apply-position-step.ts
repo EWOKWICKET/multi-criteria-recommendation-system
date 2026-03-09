@@ -89,9 +89,7 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
   const currentGlobal = currentGlobals[targetIndex];
 
   // Compute pairwise cap dynamically from current state (unless skipped)
-  const pairwiseCap = ctx.skipPairwiseCap
-    ? null
-    : computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
+  const pairwiseCap = ctx.skipPairwiseCap ? null : computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
 
   const candidates: Candidate[] = [];
 
