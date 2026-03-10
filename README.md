@@ -56,7 +56,7 @@ npm run test:watch --workspace=packages/backend
 
 Tests are organized in:
 
-- `tests/unit/` — AHP math, Saaty scale, individual algorithm logic, recommentations
+- `tests/unit/` — AHP math, Saaty scale, individual algorithm logic, recommendations
 - `tests/integration/` — endpoint schema validation, input sizes, cross-endpoint consistency
 - `tests/e2e/` — full flow with a sample AHP problem, error handling, CR warnings
 
@@ -68,6 +68,8 @@ npm run lint:fix       # Auto-fix lint errors
 npm run format         # Format all files with Prettier
 npm run format:check   # Check formatting without writing
 ```
+
+A Husky pre-push hook runs `format:check`, `lint`, and `test` before every push.
 
 ## Project Structure
 
@@ -177,39 +179,40 @@ The `warnings` field is only present when one or more consistency ratios exceed 
   "leaderGlobalPriority": 0.49,
   "leaderGlobalPriorityAfter": 0.45,
   "isWinner": true,
-  "totalSteps": 4,
+  "totalSteps": 2,
   "actions": [
-    {
-      "criterion": "Price",
-      "comparedTo": "A1",
-      "oldValue": 0.2,
-      "newValue": 0.5,
-      "steps": 3,
-      "localPriorityAfterAction": 0.35,
-      "globalPriorityAfterAction": 0.48
-    },
-    {
-      "criterion": "Quality",
-      "comparedTo": "A2",
-      "oldValue": 0.5,
-      "newValue": 1.0,
-      "steps": 1,
-      "localPriorityAfterAction": 0.40,
-      "globalPriorityAfterAction": 0.50
-    }
+    { "criterion": "Price" },
+    { "criterion": "Quality" }
   ],
   "modifiedMatrices": { "Price": [[1, "..."]], "...": "..." }
 }
 ```
 
-Actions are merged from individual steps: multiple steps on the same criterion + compared-to pair are combined into a single action showing the first `oldValue`, final `newValue`, and the number of steps taken.
+Actions list the criteria that were modified. `totalSteps` is the number of distinct criteria changed. `modifiedMatrices` contains the full updated pairwise matrices after all steps.
 
 ## Algorithms
 
 All algorithms use greedy step selection: at each iteration, every eligible +1 Saaty step is simulated, and the one with the highest global priority gain (ΔU) is applied. Early stopping triggers when the target beats the original leader.
 
-1. **Global Leader** — Eligible criteria: target LP < global winner's LP (snapshotted at start).
-2. **Local Leader** — Eligible criteria: target LP < max LP per criterion (snapshotted at start).
-3. **Global Average** — Eligible criteria: target LP < median-ranked alternative's LP (snapshotted at start).
-4. **Local Average** — Eligible criteria: target LP < average LP per criterion (snapshotted at start).
-5. **Adaptive Strategy** — Two-stage greedy optimization: Stage 1 (Local Average) fully completes, bringing target to average LP on all criteria. Stage 2 (Local Leader) matches max LP per criterion with early stopping when the target becomes the winner.
+Each step moves one pairwise value to the next position on the 17-point Saaty scale [1/9, 1/8, ..., 1, ..., 8, 9]. By default, pairwise values are capped at the local leader's row values (recomputed dynamically each iteration) to prevent overshooting.
+
+### Aggressive algorithms (100% win rate)
+
+1. **Global Leader** — Eligible criteria: target LP < global winner's current LP (re-evaluated each iteration). Pairwise cap is disabled — values are bounded only by the Saaty scale (max 9). Stops improving a criterion once the target's LP catches up with the winner's LP.
+2. **Local Leader** — Eligible criteria: target LP < max LP per criterion (snapshotted at start). Pairwise values are capped at the local leader's row.
+3. **Adaptive Strategy** — Two-stage greedy optimization: Stage 1 (Local Average) fully completes, bringing target to average LP on all criteria. Stage 2 (Local Leader) matches max LP per criterion with early stopping when the target becomes the winner.
+
+### Conservative algorithms (may not achieve winner status)
+
+4. **Global Average** — Eligible criteria: target LP < median-ranked alternative's LP (snapshotted at start).
+5. **Local Average** — Eligible criteria: target LP < average LP per criterion (snapshotted at start).
+
+## Experiments
+
+The `scripts/run-experiments.ts` script benchmarks all 5 algorithms across 1000 random problems and 46 edge cases (8 types). Results are written to `experiments.md`.
+
+```bash
+npm run experiments
+```
+
+Edge case types: LL-Excessive, Conservative wins, Adaptive-only, High-criteria stress, Dominant criterion, Equal weights, Close second, Low-weight first.
