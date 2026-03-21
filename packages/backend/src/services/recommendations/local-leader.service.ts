@@ -40,7 +40,6 @@ export function localLeader({
 
   const leaderGlobalPriority = globalValues[bestIndex];
 
-  // Snapshot max local priorities as baseline
   const maxLP: Record<string, number> = {};
 
   for (const c of criteriaNames) {
@@ -57,7 +56,6 @@ export function localLeader({
     steps: [] as RecommendationResult['steps'],
   };
 
-  // Greedy: pick highest-ΔU step among criteria where target < max LP
   for (;;) {
     const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < maxLP[c];
     const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);

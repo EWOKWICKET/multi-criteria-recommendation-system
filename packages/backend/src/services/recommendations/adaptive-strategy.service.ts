@@ -53,7 +53,6 @@ export function adaptiveStrategy({
     };
   }
 
-  // Snapshot baselines
   const avgLP: Record<string, number> = {};
   const maxLP: Record<string, number> = {};
 
@@ -76,7 +75,6 @@ export function adaptiveStrategy({
   // Stage 1: Local Average — run to FULL completion (target >= avg LP on all criteria)
   runFullStage(ctx, (c) => (localPriorities[c] ?? [])[targetIndex] < avgLP[c]);
 
-  // Check if already winner after Stage 1
   const stage1Globals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
 
   if (!isCurrentWinner(stage1Globals, targetIndex, bestIndex)) {

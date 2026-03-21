@@ -88,7 +88,6 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
   const currentGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);
   const currentGlobal = currentGlobals[targetIndex];
 
-  // Compute pairwise cap dynamically from current state (unless skipped)
   const pairwiseCap = ctx.skipPairwiseCap ? null : computePairwiseCap(localPriorities, currentMatrices, criteriaNames);
 
   const candidates: Candidate[] = [];
@@ -102,7 +101,6 @@ function simulateCandidates(ctx: StepContext, isEligible: (criterion: string) =>
       const currentVal = currentMatrices[criterion][targetIndex][j];
       const capVal = pairwiseCap?.[criterion]?.[j];
 
-      // Determine the target pairwise value for this step
       const nextPairwise = computeNextPairwise(currentVal, capVal);
 
       if (nextPairwise === null || nextPairwise <= currentVal + 1e-9) continue;
@@ -161,7 +159,6 @@ function applyCandidate(candidate: Candidate, ctx: StepContext): number[] {
 export function applyGreedyStep(ctx: StepContext, isEligible: (criterion: string) => boolean): StepResult {
   const candidates = simulateCandidates(ctx, isEligible);
 
-  // Pick highest ΔU
   let best: Candidate | null = null;
 
   for (const c of candidates) {

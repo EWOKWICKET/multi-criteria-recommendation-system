@@ -64,7 +64,6 @@ export function globalLeader({
     skipPairwiseCap: true,
   };
 
-  // Greedy: pick highest-ΔU step among criteria where target < leader's current LP
   for (;;) {
     const isEligible = (c: string): boolean => {
       const lp = localPriorities[c] ?? [];

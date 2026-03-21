@@ -40,7 +40,6 @@ export function localAverage({
 
   const leaderGlobalPriority = globalValues[bestIndex];
 
-  // Snapshot average local priorities as baseline
   const avgLP: Record<string, number> = {};
 
   for (const c of criteriaNames) {
@@ -58,7 +57,6 @@ export function localAverage({
     steps: [] as RecommendationResult['steps'],
   };
 
-  // Greedy: pick highest-ΔU step among criteria where target < average LP
   for (;;) {
     const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < avgLP[c];
     const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);

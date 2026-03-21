@@ -61,7 +61,6 @@ export function globalAverage({
     steps: [] as RecommendationResult['steps'],
   };
 
-  // Greedy: pick highest-ΔU step among criteria where target < median's LP
   for (;;) {
     const isEligible = (c: string): boolean => (localPriorities[c] ?? [])[targetIndex] < medianLP[c];
     const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);

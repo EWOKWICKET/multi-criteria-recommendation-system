@@ -16,7 +16,6 @@ function createMatrixInput({ container, size, label, names }: MatrixInputParams)
   const table = document.createElement('table');
   table.dataset['label'] = label;
 
-  // Header row with names
   const thead = document.createElement('tr');
   thead.appendChild(document.createElement('th')); // empty corner cell
 
@@ -31,7 +30,6 @@ function createMatrixInput({ container, size, label, names }: MatrixInputParams)
   for (let i = 0; i < size; i++) {
     const row = document.createElement('tr');
 
-    // Row label
     const rowLabel = document.createElement('th');
     rowLabel.textContent = names[i] ?? `${i + 1}`;
     row.appendChild(rowLabel);
@@ -84,7 +82,6 @@ function readMatrix(table: HTMLTableElement): number[][] {
   const rows = table.querySelectorAll('tr');
   const matrix: number[][] = [];
 
-  // Skip first row (header)
   rows.forEach((row, idx) => {
     if (idx === 0) return;
 
@@ -205,7 +202,6 @@ export function readCriteriaMatrix(wrapper: HTMLElement): number[][] {
   const pairwiseSection = wrapper.querySelector<HTMLElement>('.criteria-pairwise-section');
   const simpleSection = wrapper.querySelector<HTMLElement>('.criteria-simple-section');
 
-  // Check which mode is active
   const isPairwise = pairwiseSection?.style.display !== 'none';
 
   if (isPairwise) {
