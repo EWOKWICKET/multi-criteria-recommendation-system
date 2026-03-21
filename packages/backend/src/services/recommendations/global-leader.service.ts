@@ -61,7 +61,6 @@ export function globalLeader({
     criteriaWeights,
     targetIndex,
     steps: [] as RecommendationResult['steps'],
-    skipPairwiseCap: true,
   };
 
   for (;;) {
@@ -70,22 +69,9 @@ export function globalLeader({
 
       return lp[targetIndex] < lp[bestIndex];
     };
-    const { applied, newGlobals } = applyGreedyStep(ctx, isEligible);
+    const { applied } = applyGreedyStep(ctx, isEligible);
 
     if (!applied) break;
-
-    if (isCurrentWinner(newGlobals, targetIndex, bestIndex)) {
-      return {
-        originalGlobalPriority,
-        newGlobalPriority: newGlobals[targetIndex],
-        leaderGlobalPriority,
-        leaderGlobalPriorityAfter: newGlobals[bestIndex],
-        isWinner: true,
-        totalSteps: ctx.steps.length,
-        steps: ctx.steps,
-        modifiedMatrices: currentMatrices,
-      };
-    }
   }
 
   const finalGlobals = calculateGlobalPriorities(criteriaWeights, localPriorities, criteriaNames);

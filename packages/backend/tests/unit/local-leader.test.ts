@@ -93,7 +93,7 @@ describe('localLeader (Algorithm 2)', () => {
     expect(anyChanged).toBe(true);
   });
 
-  it('may produce different results than global-leader for the same input', () => {
+  it('improves A2 (middle-ranked) global priority', () => {
     const result = localLeader(makeParams(1));
 
     expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);

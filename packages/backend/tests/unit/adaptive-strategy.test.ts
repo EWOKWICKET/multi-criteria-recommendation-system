@@ -113,7 +113,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       const result = adaptiveStrategy(makeParams(2));
       const targetIndex = 2;
 
-      // Track local priorities per criterion across steps
       const lpTracker: Record<string, number> = {};
       for (const criterion of CRITERIA_NAMES) {
         const lp = calculatePriorityVector(ALT_MATRICES[criterion as keyof typeof ALT_MATRICES]);
@@ -149,7 +148,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       const result = adaptiveStrategy(makeParams(2));
       const targetIndex = 2;
 
-      // Compute initial averages
       const initialAvg: Record<string, number> = {};
       const initialTargetLP: Record<string, number> = {};
 
@@ -159,13 +157,10 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         initialTargetLP[criterion] = lp[targetIndex];
       }
 
-      // Find criteria that were below average initially
       const weakCriteria = CRITERIA_NAMES.filter((c) => initialTargetLP[c] < initialAvg[c]);
 
       expect(weakCriteria.length).toBeGreaterThan(0);
 
-      // Stage 1 steps should only target weak criteria (those below average)
-      // The first steps should address the weakest criterion
       const firstStep = result.steps[0];
       expect(weakCriteria).toContain(firstStep.criterion);
     });
@@ -174,8 +169,7 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       const targetIndex = 2;
       const result = adaptiveStrategy(makeParams(targetIndex));
 
-      // Greedy approach: first step should be on an eligible criterion (target < avg)
-      // but chosen by highest ΔU, not by largest deficit
+      // First step is on a below-average criterion, chosen by highest ΔU, not by largest deficit
       const eligibleCriteria: string[] = [];
 
       for (const criterion of CRITERIA_NAMES) {
@@ -191,12 +185,11 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
     });
   });
 
-  describe('stage 2 (competitive advantage / greedy optimization)', () => {
+  describe('stage 2', () => {
     it('stage 2 steps pick the most efficient improvement', () => {
       const result = adaptiveStrategy(makeParams(2));
       const targetIndex = 2;
 
-      // Replay the algorithm: rebuild matrices step by step
       const replayMatrices: Record<string, number[][]> = {};
       const replayLP: Record<string, number[]> = {};
 
@@ -205,12 +198,10 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         replayLP[name] = calculatePriorityVector(replayMatrices[name]);
       }
 
-      // Find where stage 1 ends: stage 1 runs while there's a criterion below average
       let stage1End = 0;
       for (let s = 0; s < result.steps.length; s++) {
         const step = result.steps[s];
 
-        // Apply the step to replay
         const scaleIdx = findClosestSaatyIndex(
           replayMatrices[step.criterion][targetIndex][ALT_NAMES.indexOf(step.comparedTo)]
         );
@@ -220,7 +211,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         replayMatrices[step.criterion][colIdx][targetIndex] = 1 / newVal;
         replayLP[step.criterion] = calculatePriorityVector(replayMatrices[step.criterion]);
 
-        // Check if all criteria are at or above average now
         let allAboveAvg = true;
         for (const criterion of CRITERIA_NAMES) {
           const lp = replayLP[criterion];
@@ -240,10 +230,8 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         stage1End = s + 1;
       }
 
-      // Stage 2 steps exist after stage 1
       const stage2Steps = result.steps.slice(stage1End);
 
-      // Each stage 2 step should improve global priority (greedy picks max efficiency)
       for (let i = 1; i < stage2Steps.length; i++) {
         expect(stage2Steps[i].globalPriorityAfterStep).toBeGreaterThanOrEqual(
           stage2Steps[i - 1].globalPriorityAfterStep
@@ -259,7 +247,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       expect(result.isWinner).toBe(true);
       expect(result.totalSteps).toBeGreaterThan(0);
 
-      // Global priority should increase monotonically across steps
       for (let i = 1; i < result.steps.length; i++) {
         expect(result.steps[i].globalPriorityAfterStep).toBeGreaterThanOrEqual(
           result.steps[i - 1].globalPriorityAfterStep
@@ -273,7 +260,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       expect(result.isWinner).toBe(true);
       expect(result.totalSteps).toBeGreaterThan(0);
 
-      // Global priority should increase monotonically across steps
       for (let i = 1; i < result.steps.length; i++) {
         expect(result.steps[i].globalPriorityAfterStep).toBeGreaterThanOrEqual(
           result.steps[i - 1].globalPriorityAfterStep
@@ -349,7 +335,6 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
       const targetIndex = 2;
       const criteriaWeights = calculatePriorityVector(CRITERIA_MATRIX);
 
-      // Start from original matrices and replay each step
       const matrices: Record<string, number[][]> = {};
       for (const name of CRITERIA_NAMES) {
         matrices[name] = (ALT_MATRICES[name as keyof typeof ALT_MATRICES] ?? []).map((r) => [...r]);
@@ -359,11 +344,9 @@ describe('adaptiveStrategy (Algorithm 5)', () => {
         const colIdx = ALT_NAMES.indexOf(step.comparedTo);
         const criterion = step.criterion;
 
-        // Apply the step
         matrices[criterion][targetIndex][colIdx] = step.newValue;
         matrices[criterion][colIdx][targetIndex] = 1 / step.newValue;
 
-        // Recalculate from scratch
         const lp: Record<string, number[]> = {};
         for (const name of CRITERIA_NAMES) {
           lp[name] = calculatePriorityVector(matrices[name]);

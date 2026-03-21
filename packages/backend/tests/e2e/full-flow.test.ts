@@ -60,35 +60,28 @@ describe('e2e: full AHP + recommendation flow', () => {
       expect(body.globalPriorities).toHaveLength(4);
       expect(body.isConsistent).toBe(true);
 
-      // Criteria weights should sum to ~1
       const weightSum = body.criteriaWeights.reduce((s: number, w: number) => s + w, 0);
       expect(weightSum).toBeCloseTo(1, 4);
 
-      // Global priorities should sum to ~1
       const prioritySum = body.globalPriorities.reduce((s: number, p: { priority: number }) => s + p.priority, 0);
       expect(prioritySum).toBeCloseTo(1, 4);
 
-      // Winner should be the first in sorted list
       expect(body.globalPriorities[0].name).toBe(body.winner);
 
-      // Each subsequent priority should be ≤ previous
       for (let i = 1; i < body.globalPriorities.length; i++) {
         expect(body.globalPriorities[i - 1].priority).toBeGreaterThanOrEqual(body.globalPriorities[i].priority);
       }
 
-      // Local priorities per criterion should each sum to ~1
       for (const name of SAMPLE_PROBLEM.criteriaNames) {
         const lp: number[] = body.localPriorities[name];
         const lpSum = lp.reduce((s, v) => s + v, 0);
         expect(lpSum).toBeCloseTo(1, 4);
       }
 
-      // All CRs should be < 0.1 for this consistent problem
       for (const [_, cr] of Object.entries(body.consistencyRatios)) {
         expect(cr as number).toBeLessThan(0.1);
       }
 
-      // No warnings for consistent matrices
       expect(body.warnings).toBeUndefined();
     });
   });
@@ -105,7 +98,6 @@ describe('e2e: full AHP + recommendation flow', () => {
       const res = await app.inject({ method: 'POST', url: '/api/ahp/solve', payload: SAMPLE_PROBLEM });
       baselineResult = res.json();
 
-      // Find the weakest alternative (last in sorted global priorities)
       const weakestName = baselineResult.globalPriorities[baselineResult.globalPriorities.length - 1].name;
       weakestIndex = SAMPLE_PROBLEM.alternativeNames.indexOf(weakestName);
     });
@@ -136,26 +128,18 @@ describe('e2e: full AHP + recommendation flow', () => {
         )!.priority;
 
         expect(result.originalGlobalPriority).toBeCloseTo(baselinePriority, 4);
-
-        // Should improve or maintain priority
         expect(result.newGlobalPriority).toBeGreaterThanOrEqual(result.originalGlobalPriority);
 
-        // Actions should be merged per criterion
         expect(result.actions.length).toBeGreaterThan(0);
         expect(result.actions.length).toBeLessThanOrEqual(SAMPLE_PROBLEM.criteriaNames.length);
-
-        // totalSteps should equal number of actions (criteria improved)
         expect(result.totalSteps).toBe(result.actions.length);
 
-        // Each action should have a criterion name
         for (const action of result.actions) {
           expect(action.criterion).toBeDefined();
         }
 
-        // Modified matrices should exist for all criteria
         expect(Object.keys(result.modifiedMatrices).sort()).toEqual([...SAMPLE_PROBLEM.criteriaNames].sort());
 
-        // Modified matrices should maintain same dimensions
         for (const name of SAMPLE_PROBLEM.criteriaNames) {
           const matrix = result.modifiedMatrices[name];
           expect(matrix).toHaveLength(4);

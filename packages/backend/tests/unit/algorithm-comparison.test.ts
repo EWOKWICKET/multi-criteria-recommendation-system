@@ -8,15 +8,9 @@ import {
 } from '../../src/services/recommendations';
 
 /**
- * Test scenario: Algorithms 1-4 are strictly target-matching — they only generate
- * steps to reach their specific baseline profile, then stop. They do NOT force a win.
- * Algorithm 5 (Adaptive Strategy) combines Global Leader + Local Leader stages.
- *
- * Setup:
- * - 2 criteria: C_low (weight ~0.1), C_high (weight ~0.9)
- * - criteriaNames = ["C_low", "C_high"] — low-weight FIRST
- * - C_low: A0 strongly dominates → target far from local max → many steps needed
- * - C_high: A0 slightly ahead → target close to leader → few steps needed
+ * 2 criteria: C_low (weight ~0.1) and C_high (weight ~0.9), low-weight first.
+ * C_low: A0 strongly dominates → target far from local max → many steps.
+ * C_high: A0 slightly ahead → target close to leader → few steps.
  */
 
 const CRITERIA_MATRIX = [
@@ -77,7 +71,6 @@ describe('algorithm comparison — target-matching vs adaptive', () => {
     const params = makeParams();
     const as = adaptiveStrategy(params);
 
-    // Adaptive combines Global Leader + Local Leader, so it should win
     expect(as.isWinner).toBe(true);
   });
 
@@ -85,8 +78,7 @@ describe('algorithm comparison — target-matching vs adaptive', () => {
     const params = makeParams();
     const ll = localLeader(params);
 
-    // With greedy approach, Local Leader should still have steps on both criteria
-    // (it matches max LP on all criteria) but prioritizes by global priority gain
+    // greedy picks by highest ΔU, not criterion order
     const lowWeightSteps = ll.steps.filter((s) => s.criterion === 'C_low');
     const highWeightSteps = ll.steps.filter((s) => s.criterion === 'C_high');
 
@@ -98,7 +90,6 @@ describe('algorithm comparison — target-matching vs adaptive', () => {
     const ga = globalAverage(params);
     const gl = globalLeader(params);
 
-    // Global Average targets the median, a lower baseline than the leader
     expect(ga.totalSteps).toBeLessThanOrEqual(gl.totalSteps);
   });
 
@@ -120,8 +111,7 @@ describe('algorithm comparison — target-matching vs adaptive', () => {
     const llOriginal = localLeader(makeParams());
     const llReversed = localLeader(reversedParams);
 
-    // With C_high first, Local Leader targets the important criterion first
-    // and may win via early stopping before wasting steps on C_low
+    // C_high first → early stopping kicks in sooner, fewer total steps
     expect(llReversed.totalSteps).toBeLessThanOrEqual(llOriginal.totalSteps);
   });
 });

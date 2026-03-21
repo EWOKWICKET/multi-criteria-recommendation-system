@@ -37,12 +37,9 @@ const makeParams = (targetIndex: number) => ({
 });
 
 describe('localAverage (Algorithm 4)', () => {
-  it('returns no steps when target is above average in every criterion', () => {
-    // A1 is the strongest overall — likely above average in most criteria
+  it('runs cleanly for the global winner (A1)', () => {
     const result = localAverage(makeParams(0));
 
-    // A1 dominates Price, so may still need steps for other criteria
-    // Just verify it runs without error and returns valid structure
     expect(result.totalSteps).toBeGreaterThanOrEqual(0);
     expect(result.steps).toHaveLength(result.totalSteps);
   });
