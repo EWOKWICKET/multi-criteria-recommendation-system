@@ -1,0 +1,101 @@
+digraph Architecture {
+  rankdir=LR
+  splines=false
+  bgcolor=white
+  compound=true
+  nodesep=0.5
+  ranksep=1.2
+
+  node [
+    shape=rectangle
+    style=filled
+    fillcolor=white
+    color=black
+    fontname="Helvetica"
+    fontsize=12
+    fontcolor=black
+  ]
+
+  edge [
+    color=black
+    arrowsize=0.7
+    fontname="Helvetica"
+    fontsize=10
+  ]
+
+  user [label="User\n(Browser)" shape=ellipse]
+
+  subgraph cluster_frontend {
+    label="Frontend"
+    fontname="Helvetica"
+    fontsize=13
+    color=black
+    style=dashed
+
+    ui [label="UI Components\n(form, matrix, results)"]
+  }
+
+  subgraph cluster_backend {
+    label="Backend"
+    fontname="Helvetica"
+    fontsize=13
+    color=black
+    style=dashed
+
+    routes [label="Routes\n/api/ahp\n/api/recommendations/*"]
+    hooks  [label="Hooks\n(e.g. validation)"]
+
+    subgraph cluster_controllers {
+      label="Controllers"
+      fontname="Helvetica"
+      fontsize=12
+      color=black
+      style=dotted
+
+      solve_ahp [label="Solve AHP"]
+      rec_ctrl  [label="Recommendations"]
+    }
+
+    subgraph cluster_services {
+      label="Services"
+      fontname="Helvetica"
+      fontsize=12
+      color=black
+      style=dotted
+
+      subgraph cluster_algos {
+        label="Recommendation Algorithms"
+        fontname="Helvetica"
+        fontsize=11
+        color=black
+        style=dotted
+
+        gl  [label="Global Leader"]
+        ll  [label="Local Leader"]
+        ga  [label="Global Average"]
+        la  [label="Local Average"]
+        as_ [label="Adaptive Strategy"]
+      }
+
+      ahp_math [label="AHP Math\n(priorities, CR, ranking)"]
+    }
+
+    routes -> hooks
+    hooks -> solve_ahp
+    hooks -> rec_ctrl
+    solve_ahp -> ahp_math
+    rec_ctrl -> gl
+    rec_ctrl -> ll
+    rec_ctrl -> ga
+    rec_ctrl -> la
+    rec_ctrl -> as_
+    gl -> ahp_math
+    ll -> ahp_math
+    ga -> ahp_math
+    la -> ahp_math
+    as_ -> ahp_math
+  }
+
+  user -> ui
+  ui -> routes [label=" HTTP /api  "]
+}
