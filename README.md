@@ -103,7 +103,7 @@ packages/
 | Method | Path                                     | Description                                                 |
 | ------ | ---------------------------------------- | ----------------------------------------------------------- |
 | `POST` | `/api/ahp/solve`                         | Baseline AHP: priorities, consistency ratios, ranked result |
-| `POST` | `/api/recommendations/global-leader`     | Match the overall winner's local priorities                 |
+| `POST` | `/api/recommendations/global-leader`     | Match the global winner's local priorities in each criterion |
 | `POST` | `/api/recommendations/local-leader`      | Match the best alternative per criterion                    |
 | `POST` | `/api/recommendations/global-average`    | Match the median-ranked alternative                         |
 | `POST` | `/api/recommendations/local-average`     | Match per-criterion average priorities                      |
@@ -192,20 +192,19 @@ Actions list the criteria that were modified. `totalSteps` is the number of dist
 
 ## Algorithms
 
-All algorithms use greedy step selection: at each iteration, every eligible +1 Saaty step is simulated, and the one with the highest global priority gain (ΔU) is applied. Early stopping triggers when the target beats the original leader.
+All algorithms use greedy step selection: at each iteration, every eligible +1 Saaty step is simulated, and the one with the highest global priority gain (ΔU) is applied.
 
-Each step moves one pairwise value to the next position on the 17-point Saaty scale [1/9, 1/8, ..., 1, ..., 8, 9]. By default, pairwise values are capped at the local leader's row values (recomputed dynamically each iteration) to prevent overshooting.
+Each step moves one pairwise value to the next position on the 17-point Saaty scale [1/9, 1/8, ..., 1, ..., 8, 9]. Pairwise values are capped at the local leader's row values (recomputed dynamically each iteration) to prevent the target from claiming a better pairwise profile than the leader it is trying to match.
 
-### Aggressive algorithms (100% win rate)
+1. **Global Leader** — Eligible criteria: target LP < global winner's LP (re-evaluated each iteration). Runs to full completion — stops only when the target's LP matches the winner's in every eligible criterion. This guarantees the recommendation reflects what it actually takes to match the current leader, not just a side-effect of priority redistribution against third parties.
 
-1. **Global Leader** — Eligible criteria: target LP < global winner's current LP (re-evaluated each iteration). Pairwise cap is disabled — values are bounded only by the Saaty scale (max 9). Stops improving a criterion once the target's LP catches up with the winner's LP.
-2. **Local Leader** — Eligible criteria: target LP < max LP per criterion (snapshotted at start). Pairwise values are capped at the local leader's row.
-3. **Adaptive Strategy** — Two-stage greedy optimization: Stage 1 (Local Average) fully completes, bringing target to average LP on all criteria. Stage 2 (Local Leader) matches max LP per criterion with early stopping when the target becomes the winner.
+2. **Local Leader** — Eligible criteria: target LP < max LP per criterion (snapshotted at start). Stops early if the target becomes the global winner. Pairwise values are capped at the local leader's row.
 
-### Conservative algorithms (may not achieve winner status)
+3. **Global Average** — Eligible criteria: target LP < median-ranked alternative's LP (snapshotted at start). Stops early if the target becomes the global winner.
 
-4. **Global Average** — Eligible criteria: target LP < median-ranked alternative's LP (snapshotted at start).
-5. **Local Average** — Eligible criteria: target LP < average LP per criterion (snapshotted at start).
+4. **Local Average** — Eligible criteria: target LP < average LP per criterion (snapshotted at start). Stops early if the target becomes the global winner.
+
+5. **Adaptive Strategy** — Two-stage: Stage 1 (Local Average) runs to full completion, bringing the target to average LP on all criteria. Stage 2 (Local Leader) then runs with early stopping, matching max LP per criterion until the target becomes the winner.
 
 ## Experiments
 
